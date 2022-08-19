@@ -1,0 +1,48 @@
+﻿#pragma once
+
+
+// CDlgNextComplete 대화 상자
+
+#include "Singleton.h"
+#include "ColorStaticST.h"
+
+class CDlgNextComplete : public CDialogEx, public CSingleton< CDlgNextComplete >
+{
+	DECLARE_DYNAMIC(CDlgNextComplete)
+
+public:
+	CDlgNextComplete(CWnd* pParent = nullptr);   // 표준 생성자입니다.
+	virtual ~CDlgNextComplete();
+
+	enum { IDD = IDD_DLG_NEXT_COMPLETE };
+private:
+	enum eNextCompleteObject
+	{
+		eNextCompleteObjectCycleNumber = 0,
+		eNextCompleteObjectStepNumber,
+		eNextCompleteObjectMaxCount
+	};
+
+	CColorStaticST	m_ctrlText[eNextCompleteObjectMaxCount];
+
+private:
+	void	InitStatic();
+protected:
+	virtual void DoDataExchange(CDataExchange* pDX);    // DDX/DDV 지원입니다.
+
+	DECLARE_MESSAGE_MAP()
+public:
+	virtual BOOL Create(CWnd* pParentWnd = NULL);
+	virtual BOOL OnInitDialog();
+	virtual BOOL PreTranslateMessage(MSG* pMsg);
+	afx_msg void OnShowWindow(BOOL bShow, UINT nStatus);
+	afx_msg void OnBnClickedBtnCompleteMoveNextExit();
+	afx_msg void OnBnClickedBtnCompleteMoveNextCycle();		
+
+
+	void SetStageNo(int nStageNo) { m_nStageNo = nStageNo; }
+	int GetStageNo() { return m_nStageNo; }
+private:
+	int m_nStageNo;
+
+};

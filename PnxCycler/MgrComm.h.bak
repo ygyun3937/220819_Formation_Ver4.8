@@ -1,0 +1,115 @@
+#pragma once
+
+#include "Singleton.h"
+#include <map>
+#include <vector>
+
+enum eCommType
+{
+	eCommTypeUnknown = 0,
+	eCommTypeEthernet,
+	eCommTypeRs232,
+	eCommTypeRs422,
+	eCommTypeRs485,
+	eCommTypeCan,
+	eCommTypeLin
+};
+
+struct SDevice
+{
+	CString strName;
+	int nDaqDataType;
+
+	// TCP
+	CString strIP;
+	int		nPort;
+	int		nPort2;
+
+	// RS
+	int	nCommPort;	
+	int	nBaudrate;
+
+	// Common
+	int nChannelNumber;
+	int nChamberControlType;
+	int nPrimaryKey;			// I/F Board, Chamber, Chiller, DAQ 등을 구분하기 위한 Unique Key I/F 에는 Channel Number 로 적용됨  PCAN에서는 사용안함
+	int nType;
+	int	nCommObj;
+	int nIndex = -1;			// Board Index
+	int	nSamplingTime;
+	int nSendPeriod;
+	int nChamberChannel;
+	int nRoomChannel;
+	CString strChamberChannel;
+
+	CStringArray arrChannel;
+
+	CString strDeviceType;
+
+	// -------------------------------------------------------------------------
+
+	CStringArray	arrCanId;
+	int nUsbChannel;
+	int nCheckCanID = 0;
+};
+
+// -------------------------------------------------------------------------------------------------
+
+//1013 hsm
+enum CommObj
+{
+	CommObjIF = 0,
+	CommObjDAQ,
+	CommObjChamber,
+	// -- 2019.09.23 셋업 및 이슈 처리 완료 후 AOCE 구형장비 업데이트 예정으로 3가지 항목 추가
+	CommObjChiller,
+	CommObjPump,
+	CommObjBSA,
+	// --
+	CommObjBalance,
+	CommObjVector,
+	CommObjDmmAnalyze,
+	CommObjDmmPower,
+	CommObjBmsPower,
+	CommObjAnalyzeTool,
+	CommObjPCAN,
+	CommObjPowerSupply,
+	CommObjPowerSupplyMid,
+	CommObjPowerSupplyRow,
+	CommObjRemote,
+	CommObjBmsPowerAux,
+	CommObjBmsCan,
+	CommObjMaxCount
+};
+
+typedef	CList< SDevice*, SDevice* >	CommList;
+
+class CMgrComm : public CSingleton<CMgrComm>
+{
+public:
+	CMgrComm();
+	virtual ~CMgrComm();
+
+	int		GetCommType(int nCommObj);
+	int		GetChannelNumber(int nCommObj, int nBoardNumber, BYTE byChannel);
+	int		GetBoardNumber(int nChannelNumber);
+
+	int		GetPrimaryKey(int nCommObj);
+	int		GetDeviceKeyFromType(int nCommObj, int nCyclerChannel);
+	int		GetCyclerChannelFromDevice(int nCommObj, int nCyclerChannel);
+
+	bool	GetDeivceFromType(int nCommObj, std::vector<SDevice*>& vecValue);
+
+private:
+	// Key <Comm Type>
+	std::map< int, std::vector<SDevice*> > m_mapDevice;
+
+	int		m_arrCommType[eDeviceTypeMaxCount];
+
+private:
+	void	LoadDevice();
+	void	AddDevice(SDevice* lpDevice);
+
+	void	RemoveAll();
+};
+

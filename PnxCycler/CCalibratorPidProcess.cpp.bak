@@ -1,0 +1,84 @@
+#include "stdafx.h"
+#include "CCalibratorPidProcess.h"
+
+//#include "./include/ADSDIO.h"
+
+
+CCalibratorPidProcess::CCalibratorPidProcess()
+{
+	Initialize();
+}
+
+CCalibratorPidProcess::~CCalibratorPidProcess()
+{
+}
+
+// -------------------------------------------------------------------------------------------------
+
+bool CCalibratorPidProcess::OpenDevice(CString strIpAddress, int nPort)
+{
+	m_strIpAddress = strIpAddress;
+	m_nPort = nPort;
+
+	bool resultValue = ConnectDeviceModbus();
+	return resultValue;
+}
+
+bool CCalibratorPidProcess::CloseDevice()
+{
+	bool resultValue = DisconnectDeviceModbus();
+	return resultValue;
+}
+
+// -------------------------------------------------------------------------------------------------
+
+bool CCalibratorPidProcess::Initialize()
+{
+	InitializeVariables();
+
+	m_bInitialize = true;
+	return m_bInitialize;
+}
+
+bool CCalibratorPidProcess::Dispose()
+{
+	CloseDevice();
+
+	return true;
+}
+
+bool CCalibratorPidProcess::InitializeVariables()
+{
+	m_pPidModbus = new CPidModbus();
+
+	return true;
+}
+
+bool CCalibratorPidProcess::ConnectDeviceModbus()
+{
+	m_pPidModbus->CreateModbus(m_strIpAddress, m_nPort, 0);
+
+	bool resultValue = m_pPidModbus->ConnectServer();
+	return resultValue;
+}
+
+bool CCalibratorPidProcess::DisconnectDeviceModbus()
+{
+	if (m_pPidModbus != nullptr)
+	{
+		m_pPidModbus->DisconnectServer();
+	}
+
+	return true;
+}
+
+int CCalibratorPidProcess::ReadCoilStatus()
+{
+	uint16_t read_holding_regs[6];
+	m_pPidModbus->ReadHoldingRegisters(11, 6, read_holding_regs);
+
+	return 0;
+}
+
+
+

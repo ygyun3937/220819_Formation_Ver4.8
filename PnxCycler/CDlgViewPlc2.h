@@ -1,0 +1,113 @@
+﻿#pragma once
+
+#include "include\PLC\actutltype.h"
+#include "include\PLC\ActDefine.h"	// ACT Common Macro Header (For Set/Get Property Value)
+// CDlgViewPlc2 대화 상자
+
+
+//PLC Block
+struct StPlcDataBlockParam2
+{
+	CString AddressName;
+	long lPlcDataBlock;
+	double dlPlcDataBlock;
+	float fPlcDataBlock;	//[+:JMW]
+	short sPlcDataBlock;	//[+:JMW]
+	//long lPlcGetDataBlock;
+};
+
+extern StPlcDataBlockParam2 m_StPlcDataBlockParam2[PLC_SEND_MAX][BLOCK_COUNT];
+
+//PLC
+struct StPlcDataParam2
+{
+	//	CString SendAddName;
+	CString ProcessAddName;
+	long lPlcData;
+	double dlPlcData;
+	//	long lPlcGetData;
+};
+
+extern StPlcDataParam2 m_StPlcDataParam2[TYPE_PLC_MAX];
+
+class CPlcProcessSequence2;
+class CDlgViewPlc2 : public CDialogEx, public CSingleton< CDlgViewPlc2 >
+{
+	DECLARE_DYNAMIC(CDlgViewPlc2)
+
+
+	enum { IDD = IDD_DLG_VIEW_PLC2 };
+public:
+	CDlgViewPlc2(CWnd* pParent = nullptr);   // 표준 생성자입니다.
+	virtual ~CDlgViewPlc2();
+
+	CPlcProcessSequence2* m_PlcProcessSequence2;
+
+public:
+	virtual BOOL Create(CWnd* pParentWnd = NULL);
+	afx_msg void OnDestroy();
+
+	CActutltype m_ActUtlType2;
+
+	CString	m_RetVal;
+	CString	m_RetVal2;
+	CString	m_RetVal3;
+
+	//Connection
+	BOOL m_bCheckOpened;
+	int m_iPlcOpenCount;	//[JMW:220321]
+
+		//[JMW:220325]
+	#define		ScheduleloadTimeID					1026
+	#define		TIMER_SET_500MS						500
+
+	int ScheduleTime;	//[JMW:220325]
+	BOOL Timerflag;		//[JMW:220325]
+
+	void SetKillScheduleTimer(BOOL timeflag);	//[JMW:220325]
+
+	//PLC
+	void PlcDataBlockInit();
+	void PlcDataInit();
+
+	void PLC_Open();
+	void PLC_Close();
+
+	//[JMW:220321] 임시 PLC 접속 확인 및 재접속 함수
+	void PLC_ConnectionCheckandReOpen();
+
+	void PLC_ReadDevice(CString strDevice, int nType);
+	void PLC_WriteDevice(CString strDevice, int nType);
+
+	void PLC_ReadDeviceBlock(CString strDevice, int nType);
+	void PLC_WriteDeviceBlock(CString strDevice, int nType);
+
+	void PLC_DeviceValue_Convert2(float fValue, BYTE* bValue, short* sDeviceValue);
+	void PLC_SendResultData2();
+	void PLC_RealNumberWriteDevice2(CString strDevice, int nType);
+	void PLC_SendProcessData();
+	void PLC_ReadProcessData();
+	void PLC_ReadResultData();
+
+	void SetPlcProcessStart();
+	void SetPlcProcessStop();
+	void SetPlcProcessReset();
+	void SetPlcThreadStop();
+	StPlcDataBlockParam2 m_StPlcDataBlockParam2[PLC_SEND_MAX][BLOCK_COUNT];
+	StPlcDataParam2 m_StPlcDataParam2[TYPE_PLC_MAX];
+
+	#define PLC_RETRY_MAX_COUNT 3
+
+// 대화 상자 데이터입니다.
+#ifdef AFX_DESIGN_TIME
+	enum { IDD = IDD_DLG_VIEW_PLC };
+#endif
+
+protected:
+	virtual void DoDataExchange(CDataExchange* pDX);    // DDX/DDV 지원입니다.
+
+	DECLARE_MESSAGE_MAP()
+public:
+	afx_msg void OnTimer(UINT_PTR nIDEvent);
+
+};

@@ -1,0 +1,130 @@
+#pragma once
+
+#include "Singleton.h"
+
+using namespace std;
+
+#include <vector>
+
+struct SSchedule
+{
+	CString strSerialNumber;
+	CString strScheduleName;
+	CString	strScheduleFilePath;
+	CString strScheduleDescription;
+	CString strWriteTime;
+	CString strModifyTime;
+	CTime sModifyTime;
+
+	void	Init()
+	{
+		strSerialNumber.Empty();
+		strScheduleName.Empty();
+		strScheduleFilePath.Empty();
+		strScheduleDescription.Empty();
+		strWriteTime.Empty();
+		strModifyTime.Empty();
+	}
+};
+
+struct SModel
+{
+	CString strSerialNumber;
+	CString strModelName;
+	CString strWritter;
+	CString strModelDescription;
+	CString strWriteTime;
+	CString strFilePath;
+
+	vector<SSchedule*> vecSchedule;
+
+	void	Init()
+	{
+		strSerialNumber.Empty();
+		strModelName.Empty();
+		strWritter.Empty();
+		strModelDescription.Empty();
+		strWriteTime.Empty();
+		strFilePath.Empty();
+	}
+
+	void	Clear()
+	{
+		auto iter = vecSchedule.begin();
+		auto iterE = vecSchedule.end();
+
+		while (iter != iterE)
+		{
+			SSchedule* lpSchedule = (*iter);
+
+			if (lpSchedule)
+			{
+				delete lpSchedule;
+				lpSchedule = nullptr;
+			}
+
+			++iter;
+		}
+
+		vecSchedule.clear();
+	}
+
+	void	push_back(SSchedule* lpSchedule)
+	{
+		vecSchedule.push_back(lpSchedule);
+	}
+
+	int		GetSize()
+	{
+		return (int)vecSchedule.size();
+	}
+
+	SSchedule*	GetSchedule(int nIndex)
+	{
+		if (nIndex < 0 || (int)vecSchedule.size() <= nIndex)
+			return nullptr;
+
+		return vecSchedule[nIndex];
+	}
+
+	vector<SSchedule*>&	GetScheduleVector()
+	{
+		return vecSchedule;
+	}
+};
+
+
+
+class CMgrModel : public CSingleton< CMgrModel >
+{
+public:
+	CMgrModel();
+	virtual ~CMgrModel();
+
+	bool	LoadModel();
+
+	SModel*	GetModel(int nIndex);
+
+	std::vector<SModel*>&	GetModelVector();
+
+	void	SetModelIndex(int nIndex) { m_nModelIndex = nIndex; }
+	void	SetScheduleIndex(int nIndex) { m_nScheduleIndex = nIndex; }
+
+	int		GetModelIndex() { 
+		return m_nModelIndex; }
+	int		GetScheduleIndex() { 
+		return m_nScheduleIndex; }
+private:
+	int		m_nModelIndex;
+	int		m_nScheduleIndex;
+	int		m_nSyncMode;
+
+	CString	m_strFilePath;
+
+	std::vector<SModel*> m_vecModel;
+private:
+	void	ClearModel();
+	void	SearchModel();
+	void	SearchSchedule(SModel* lpModel, CString strFilePath);
+};
+

@@ -1,0 +1,147 @@
+#pragma once
+
+#include "Singleton.h"
+#include <vector>
+
+enum eChamberStatus
+{
+	eChamberStatusOff = 0,
+	eChamberStatusOn,
+	eChamberStatusToHigh,	// 승온
+	eChamberStatusToLow		// 냉각
+};
+
+struct SChamber
+{
+	int		nStatus = 0;	// 현재 상태
+	int		nNumber = 0;
+
+	float	fCurrentValue = 0;
+	float	fSettingValue = 0;	
+	float	fManualSettingValue = 0;
+
+	bool	bSendOnCommand = false;
+	bool	bSendOffCommand = false;
+	bool	bSendChangeValue = false;
+	bool	bChamberExec = false;	// 챔버 On / Off Flag
+	bool	bChamberAlarm = false;
+
+	CString	strName;
+
+	std::vector<CString> vecCyclerChannel;
+	//bViewFlag : View 목적으로만 Chamber 정보를 가져오는 경우
+	void	GetChamberInfo(std::vector<CString>& vecValue,bool bViewFlag = false)
+	{
+		vecValue.clear();
+		{
+			vecValue.push_back(strName);
+		}
+
+		{
+			if (bViewFlag != true)
+			{
+				auto iter = vecCyclerChannel.begin();
+				auto iterE = vecCyclerChannel.end();
+
+				CString str;
+
+				while (iter != iterE)
+				{
+					int chNum = _ttoi(*iter) + 1;
+					CString strChNum;
+					strChNum.Format(_T("%d"), chNum);
+
+					//str += *iter;
+					str += strChNum;
+					str += ",";
+
+					++iter;
+				}
+
+				str.TrimRight(",");
+
+				vecValue.push_back(str);
+			}
+			
+		}
+
+		{
+			// 상태값 정의 필요.. 고민좀 더 해봐야할듯
+			CString strValue;
+
+			if (false == bChamberExec)
+				strValue = "Offline";
+			else
+				strValue = "Running";
+
+			vecValue.push_back(strValue);
+		}
+
+		{
+			CString strValue;
+			strValue.Format("%.3f", fCurrentValue);
+
+			vecValue.push_back(strValue);
+		}
+
+		{
+			if (bViewFlag != true)
+			{
+				CString strValue;
+				strValue.Format("%.3f", fSettingValue);
+
+				vecValue.push_back(strValue);
+			}
+		}
+
+		{
+			if (bViewFlag != true)
+			{
+				CString strValue;
+				strValue.Format("%.3f", fManualSettingValue);
+
+				vecValue.push_back(strValue);
+			}
+		}
+
+		{
+			// 현재 상태값을 보고 텍스트를 변경하자. 구동/해제
+			CString strValue;
+			if (true == bChamberAlarm)
+			{
+				strValue = "Alarm";
+			}
+			else
+			{
+				if (false == bChamberExec)
+				{
+					strValue = "Chamber Off";
+				}
+				else
+				{
+					strValue = "Chamber On";
+				}
+			}
+			vecValue.push_back(strValue);
+		}
+
+
+	}
+};
+
+class CMgrChamber : public CSingleton< CMgrChamber >
+{
+public:
+	CMgrChamber();
+	virtual ~CMgrChamber();
+
+	SChamber*	GetDevice(int nChamberNumber);
+	SChamber*	GetDeivceCyclerChannel(int nCyclerChannelNumber);
+
+	std::vector<SChamber*>&	GetDeviceChamber() { return m_vecDeviceChamber; }
+private:
+	std::vector<SChamber*>	m_vecDeviceChamber;
+private:
+	void	LoadChamber();
+};
+

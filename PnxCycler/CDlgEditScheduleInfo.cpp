@@ -1,0 +1,1391 @@
+﻿// CDlgEditScheduleInfo.cpp: 구현 파일
+//
+
+#include "stdafx.h"
+#include "PnxCycler.h"
+#include "CDlgEditScheduleInfo.h"
+#include "afxdialogex.h"
+#include "CMgrModel.h"
+#include "CMgrScheduleHistory.h"
+#include "CMgrAccount.h"
+#include "MgrChannel.h"
+#include "MgrConfig.h"
+#include "MgrComm.h"
+#include "SockProc.h"
+#include "CDlgViewScheduleInfo.h"
+
+#ifdef _DEBUG
+#define new DEBUG_NEW
+#undef THIS_FILE
+static char THIS_FILE[] = __FILE__;
+#endif
+
+
+// CDlgEditScheduleInfo 대화 상자
+
+IMPLEMENT_DYNAMIC(CDlgEditScheduleInfo, CDialogEx)
+
+CDlgEditScheduleInfo::CDlgEditScheduleInfo(CWnd* pParent /*=nullptr*/)
+	: CDialogEx(IDD_DLG_EDIT_SCHEDULE_INFO, pParent)
+{
+	m_nMaterialItem			= -1;
+	m_nMaterialSubItem		= -1;
+	m_nScheduleLoadingType	= eScheduleLoadingTypeAdd;
+}
+
+CDlgEditScheduleInfo::~CDlgEditScheduleInfo()
+{
+}
+
+void CDlgEditScheduleInfo::DoDataExchange(CDataExchange* pDX)
+{
+	CDialogEx::DoDataExchange(pDX);
+	DDX_Control(pDX, IDC_LIST_EDIT_SCHEDULE_INFO_WORK_NAME, m_listWorkName);
+	DDX_Control(pDX, IDC_LIST_EDIT_SCHEDULE_INFO_GROUP, m_listGroup);
+	DDX_Control(pDX, IDC_LIST_EDIT_SCHEDULE_INFO_MATERIAL, m_listMaterial);
+}
+
+
+BEGIN_MESSAGE_MAP(CDlgEditScheduleInfo, CDialogEx)
+	ON_WM_SHOWWINDOW()
+	ON_WM_DESTROY()
+	ON_BN_CLICKED(IDC_BTN_EDIT_SCHEDULE_VIEW, &CDlgEditScheduleInfo::OnBnClickedBtnEditScheduleView)
+	ON_BN_CLICKED(IDC_BTN_EDIT_SCHEDULE_FILE_PATH, &CDlgEditScheduleInfo::OnBnClickedBtnEditScheduleFilePath)
+	ON_BN_CLICKED(IDC_BTN_EDIT_SCHEDULE_PREV, &CDlgEditScheduleInfo::OnBnClickedBtnEditSchedulePrev)
+	ON_BN_CLICKED(IDC_BTN_EDIT_SCHEDULE_START, &CDlgEditScheduleInfo::OnBnClickedBtnEditScheduleStart)
+	ON_BN_CLICKED(IDC_BTN_EDIT_SCHEDULE_CANCLE, &CDlgEditScheduleInfo::OnBnClickedBtnEditScheduleCancle)
+	ON_NOTIFY(NM_CLICK, IDC_LIST_EDIT_SCHEDULE_INFO_WORK_NAME, &CDlgEditScheduleInfo::OnClickListEditScheduleInfoWorkName)
+	ON_NOTIFY(NM_DBLCLK, IDC_LIST_EDIT_SCHEDULE_INFO_MATERIAL, &CDlgEditScheduleInfo::OnDblclkListEditScheduleInfoMaterial)
+	ON_WM_MEASUREITEM()
+	ON_CBN_EDITCHANGE(IDC_CMB_EDIT_SCHEDULE_INFO_CYCLE, &CDlgEditScheduleInfo::OnCbnEditchangeCmbEditScheduleInfoCycle)
+	ON_CBN_EDITCHANGE(IDC_CMB_EDIT_SCHEDULE_INFO_STEP, &CDlgEditScheduleInfo::OnCbnEditchangeCmbEditScheduleInfoStep)
+	ON_CBN_SELCHANGE(IDC_CMB_EDIT_SCHEDULE_INFO_CYCLE, &CDlgEditScheduleInfo::OnCbnSelchangeCmbEditScheduleInfoCycle)
+	ON_CBN_SELCHANGE(IDC_CMB_EDIT_SCHEDULE_INFO_STEP, &CDlgEditScheduleInfo::OnCbnSelchangeCmbEditScheduleInfoStep)
+	ON_EN_CHANGE(IDC_EDT_CYCLE_LOOP_COUNT, &CDlgEditScheduleInfo::OnEnChangeEdtCycleLoopCount)
+END_MESSAGE_MAP()
+
+
+// CDlgEditScheduleInfo 메시지 처리기
+
+
+BOOL CDlgEditScheduleInfo::Create(CWnd* pParentWnd)
+{
+	// TODO: 여기에 특수화된 코드를 추가 및/또는 기본 클래스를 호출합니다.
+
+	return CDialogEx::Create(IDD, pParentWnd);
+}
+
+
+BOOL CDlgEditScheduleInfo::PreTranslateMessage(MSG* pMsg)
+{
+	if (WM_KEYDOWN == pMsg->message)
+	{
+		if (VK_ESCAPE == pMsg->wParam)
+		{
+			ShowWindow(SW_HIDE);
+
+			return TRUE;
+		}
+
+		if (VK_F4 == pMsg->wParam)
+		{
+			//if (IDC_EDIT_EDIT_SCHEDULE_INFO_FILE_PATH != GetFocus()->GetDlgCtrlID() && 
+			//	IDC_EDIT_EDIT_SCHEDULE_INFO_WORK_NAME != GetFocus()->GetDlgCtrlID())
+			//{
+				ExecProcScheduleView();
+
+				return TRUE;
+			//}			
+		}
+
+		if (VK_RETURN == pMsg->wParam)
+		{
+			if (IDC_CMB_EDIT_SCHEDULE_INFO_CYCLE == GetFocus()->GetDlgCtrlID())
+			{
+				return TRUE;
+			}
+			if (IDC_EDIT_MATERIAL_ID == GetFocus()->GetDlgCtrlID())
+			{
+				if (pMsg->hwnd == GetDlgItem(IDC_EDIT_MATERIAL_ID)->GetSafeHwnd())
+				{
+					CString strValue;
+					GetDlgItem(IDC_EDIT_MATERIAL_ID)->GetWindowText(strValue);
+
+					m_listMaterial.SetItemText(m_nMaterialItem, m_nMaterialSubItem, strValue);
+
+					GetDlgItem(IDC_EDIT_MATERIAL_ID)->SetWindowPos(NULL, 0, 0, 0, 0, SWP_HIDEWINDOW);
+				}
+			}
+			else
+			{
+				if (m_nEnterKeyEvent == DEFINE_ENTER_START_CYCLE)
+				{
+					m_nEnterKeyEvent = DEFINE_ENTER_START_STEP;
+					GetDlgItem(IDC_CMB_EDIT_SCHEDULE_INFO_STEP)->SetFocus();
+				}
+				else if (m_nEnterKeyEvent == DEFINE_ENTER_START_STEP)
+				{
+					m_nEnterKeyEvent = DEFINE_ENTER_START_SCHEDULE;
+					GetDlgItem(IDC_BTN_EDIT_SCHEDULE_START)->SetFocus();
+				}
+				else if (m_nEnterKeyEvent == DEFINE_ENTER_START_SCHEDULE)
+				{
+					ExecProcScheduleStart();
+				}
+			}
+
+			return TRUE;
+		}
+	}
+
+	return CDialogEx::PreTranslateMessage(pMsg);
+}
+
+
+BOOL CDlgEditScheduleInfo::OnInitDialog()
+{
+	CDialogEx::OnInitDialog();
+
+	InitListCtrl();
+
+	GetDlgItem(IDC_EDIT_MATERIAL_ID)->SetWindowPos(NULL, 0, 0, 0, 0, SWP_HIDEWINDOW);
+
+	CenterWindow();
+
+	//CheckDlgButton(IDC_CHECK_SCHNAME, BST_CHECKED);
+	//CheckDlgButton(IDC_CHECK_TIME, BST_CHECKED);
+
+	// 시작위치 선택 없이 Enter Key 입력 시 작업 시작 동작. 2020-12-28
+	m_nEnterKeyEvent = DEFINE_ENTER_START_SCHEDULE;
+	return TRUE;  // return TRUE unless you set the focus to a control
+				  // 예외: OCX 속성 페이지는 FALSE를 반환해야 합니다.
+}
+
+
+void CDlgEditScheduleInfo::OnShowWindow(BOOL bShow, UINT nStatus)
+{
+	if (TRUE == bShow)
+	{
+		GetDlgItem(IDC_BTN_EDIT_SCHEDULE_START)->EnableWindow(TRUE);
+		if (eScheduleLoadingTypeAdd == m_nScheduleLoadingType)
+		{
+			SetWindowText("Process start info");
+			GetDlgItem(IDC_BTN_EDIT_SCHEDULE_START)->SetWindowText("Process Start");
+		}
+		else
+		{
+			SetWindowText("Process Reservation Info");
+			GetDlgItem(IDC_BTN_EDIT_SCHEDULE_START)->SetWindowText("Process Reservation");
+		}
+
+		LoadScheduleInfo();
+
+		LoadWorkNameHistory();
+
+		InitRadioButton();
+
+		LoadMaterial();
+
+		GetDlgItem(IDC_EDT_CYCLE_LOOP_COUNT)->SetWindowTextA(_T("1"));
+
+		m_nMaterialItem		= -1;
+		m_nMaterialSubItem	= -1;
+	}
+
+	CDialogEx::OnShowWindow(bShow, nStatus);
+}
+
+
+void CDlgEditScheduleInfo::OnDestroy()
+{
+	CDialogEx::OnDestroy();
+
+	// TODO: 여기에 메시지 처리기 코드를 추가합니다.
+}
+
+
+void CDlgEditScheduleInfo::OnBnClickedBtnEditScheduleView()
+{
+	ExecProcScheduleView();
+}
+
+
+void CDlgEditScheduleInfo::OnBnClickedBtnEditScheduleFilePath()
+{
+	//UpdateData(TRUE);
+
+	CString strFilePath;
+	GetDlgItem(IDC_EDIT_EDIT_SCHEDULE_INFO_FILE_PATH)->GetWindowText(strFilePath);
+
+	BROWSEINFO sBrowserInfo;
+	::ZeroMemory(&sBrowserInfo, sizeof(BROWSEINFO));
+
+	CString strtemp;
+	strtemp = strFilePath.GetBuffer(strFilePath.GetLength());;
+
+	TCHAR szFilePath[_MAX_PATH] = _T("");
+
+	sBrowserInfo.hwndOwner = NULL;
+	sBrowserInfo.pidlRoot = NULL;
+	sBrowserInfo.lParam = (LPARAM)strFilePath.GetBuffer(strFilePath.GetLength());
+	sBrowserInfo.pszDisplayName = szFilePath;
+	sBrowserInfo.lpszTitle = _T("Choose a Save path");
+	sBrowserInfo.ulFlags = BIF_RETURNONLYFSDIRS; // 2020-12-27//BIF_NEWDIALOGSTYLE | BIF_EDITBOX | BIF_RETURNONLYFSDIRS;
+	sBrowserInfo.lpfn = BrowseCalbackProc;
+
+	LPITEMIDLIST lpItem = ::SHBrowseForFolder(&sBrowserInfo);
+
+	strFilePath.ReleaseBuffer();
+
+	if (lpItem)
+	{
+		SHGetPathFromIDList(lpItem, szFilePath);
+
+		((CEdit*)GetDlgItem(IDC_EDIT_EDIT_SCHEDULE_INFO_FILE_PATH))->SetWindowText(szFilePath);
+	}
+}
+void CDlgEditScheduleInfo::OnBnClickedBtnEditSchedulePrev()
+{
+	ShowWindow(SW_HIDE);
+}
+
+
+void CDlgEditScheduleInfo::OnBnClickedBtnEditScheduleStart()
+{
+	GetDlgItem(IDC_BTN_EDIT_SCHEDULE_START)->EnableWindow(FALSE);
+	ExecProcScheduleStart();
+}
+
+
+void CDlgEditScheduleInfo::OnBnClickedBtnEditScheduleCancle()
+{
+	ShowWindow(SW_HIDE);
+}
+
+void	CDlgEditScheduleInfo::InitListCtrl()
+{
+	CRect rt;
+	m_listWorkName.GetClientRect(&rt);
+
+	m_listWorkName.InsertColumn(0, "", LVCFMT_CENTER, 0);
+	m_listWorkName.InsertColumn(1, "Process name", LVCFMT_LEFT, rt.Width());
+	m_listWorkName.SetExtendedStyle(LVS_EX_GRIDLINES | LVS_EX_FULLROWSELECT);
+
+	m_listGroup.GetClientRect(&rt);
+
+	m_listGroup.InsertColumn(0, "", LVCFMT_CENTER, 0);
+	m_listGroup.InsertColumn(1, "Group", LVCFMT_CENTER, rt.Width() / 3);
+	m_listGroup.InsertColumn(2, "Project", LVCFMT_CENTER, rt.Width() / 3);
+	m_listGroup.InsertColumn(3, "Worker", LVCFMT_CENTER, rt.Width() / 3);
+	m_listGroup.SetExtendedStyle(LVS_EX_GRIDLINES | LVS_EX_FULLROWSELECT);
+
+	m_listMaterial.GetClientRect(&rt);
+
+	m_listMaterial.InsertColumn(0, "", LVCFMT_CENTER, 0);
+	m_listMaterial.InsertColumn(1, "Channel", LVCFMT_CENTER, rt.Width() / 2);
+	m_listMaterial.InsertColumn(2, "Cell ID", LVCFMT_CENTER, rt.Width() / 2);	
+	m_listMaterial.ModifyStyle(LVS_OWNERDRAWFIXED, 0, 0);
+	m_listMaterial.SetExtendedStyle(LVS_EX_GRIDLINES | LVS_EX_FULLROWSELECT);
+}
+
+void	CDlgEditScheduleInfo::InitRadioButton()
+{
+	((CButton*)GetDlgItem(IDC_RDO_EDIT_SCHEDULE_SYNC_1))->SetCheck(TRUE);
+	((CButton*)GetDlgItem(IDC_RDO_EDIT_SCHEDULE_SYNC_2))->SetCheck(FALSE);
+	((CButton*)GetDlgItem(IDC_RDO_EDIT_SCHEDULE_SYNC_3))->SetCheck(FALSE);
+}
+
+void	CDlgEditScheduleInfo::LoadScheduleInfo()
+{
+	CMgrModel* pMgr = CMgrModel::GetMgr();
+
+	if (pMgr)
+	{
+		SModel* lpModel = pMgr->GetModel(pMgr->GetModelIndex());
+
+		if (!lpModel)
+			return;
+
+		SSchedule* lpSchedule = lpModel->GetSchedule(pMgr->GetScheduleIndex());
+
+		if (!lpSchedule)
+			return;
+
+		GetDlgItem(IDC_STATIC_EDIT_SCHEDULE_INFO_SCHEDULE_VALUE_1)->SetWindowText(lpSchedule->strScheduleName);
+		GetDlgItem(IDC_STATIC_EDIT_SCHEDULE_INFO_SCHEDULE_VALUE_2)->SetWindowText(GetSelectedCyclerChannel());
+		GetDlgItem(IDC_STATIC_EDIT_SCHEDULE_INFO_SCHEDULE_VALUE_3)->SetWindowText(GetSelectedCyclerChannelCount());
+	}
+
+	// 순서는 협의 해야 할것으로 보인다.
+
+	// 첫번째 login 된 정보의 설정된 경로가 존재할때
+	// 두번째 경로 미 존재시, 히스토리에 마지막 경로를 참조?
+	// 세번째 그것도 없다면, 기본 경로로 반영
+	bool bApplyFilePath = false;
+
+	CMgrAccount* pMgrAccount = CMgrAccount::GetMgr();
+
+	if (pMgrAccount)
+	{
+		if (true == pMgrAccount->IsLogin())
+		{
+			sAccount* lpAccount = pMgrAccount->GetLoginedAccount();
+
+			if (lpAccount)
+			{
+				if (_tcsicmp(lpAccount->szSaveFilePath, "") != 0)
+				{
+					bApplyFilePath = true;
+
+					GetDlgItem(IDC_EDIT_EDIT_SCHEDULE_INFO_FILE_PATH)->SetWindowText(lpAccount->szSaveFilePath);
+				}
+			}
+		}
+	}
+
+	if (false == bApplyFilePath)
+	{
+		CMgrScheduleHistory* pMgrHistory = CMgrScheduleHistory::GetMgr();
+
+		if (pMgrHistory)
+		{
+			StringList* listFilePath = pMgrHistory->GetItem(eScheduleHistoryTypeLogFilePath);
+
+			if (listFilePath)
+			{
+				if (listFilePath->size() > 0)
+				{
+					CString strValue = listFilePath->front();
+
+					GetDlgItem(IDC_EDIT_EDIT_SCHEDULE_INFO_FILE_PATH)->SetWindowText(strValue);
+				}				
+			}
+			else
+			{
+				CMgrConfig* pMgrConfig = CMgrConfig::GetMgr();
+
+				if (pMgrConfig)
+				{
+					GetDlgItem(IDC_EDIT_EDIT_SCHEDULE_INFO_FILE_PATH)->SetWindowText(pMgrConfig->GetLogFilePath());
+				}
+			}
+		}
+	}
+}
+
+void	CDlgEditScheduleInfo::LoadWorkNameHistory()
+{
+	GetDlgItem(IDC_EDIT_EDIT_SCHEDULE_INFO_WORK_NAME)->SetWindowText("");
+
+	m_listWorkName.DeleteAllItems();
+
+	CMgrScheduleHistory* pMgr = CMgrScheduleHistory::GetMgr();
+
+	if (pMgr)
+	{
+		StringList* listWorkName = pMgr->GetItem(eScheduleHistoryTypeSampleName);
+
+		if (listWorkName)
+		{
+			auto iter	= listWorkName->begin();
+			auto iterE	= listWorkName->end();
+
+			int nIndex = 0;
+
+			while (iter != iterE)
+			{
+				CString strValue = (*iter);
+
+				LVITEM Item;
+
+				Item.iItem		= nIndex;
+				Item.mask		= LVIF_TEXT | LVIF_PARAM;
+				Item.stateMask	= LVIS_STATEIMAGEMASK;
+				Item.state		= INDEXTOSTATEIMAGEMASK(1);
+				Item.pszText	= _T("");
+				Item.iSubItem	= 0;
+
+				m_listWorkName.InsertItem(&Item);
+
+				m_listWorkName.SetItemText(nIndex, 0, "");
+				m_listWorkName.SetItemText(nIndex, 1, strValue);
+
+				nIndex++;
+
+				++iter;
+			}
+
+			if(listWorkName->size() > 0)
+				GetDlgItem(IDC_EDIT_EDIT_SCHEDULE_INFO_WORK_NAME)->SetWindowText(listWorkName->front());
+		}
+	}
+}
+
+BOOL	CDlgEditScheduleInfo::LoadScheduleCombo()
+{
+	((CComboBox*)GetDlgItem(IDC_CMB_EDIT_SCHEDULE_INFO_CYCLE))->ResetContent();
+	((CComboBox*)GetDlgItem(IDC_CMB_EDIT_SCHEDULE_INFO_STEP))->ResetContent();
+
+	CMgrChannel* pMgr = CMgrChannel::GetMgr();
+
+	if (!pMgr)
+		return FALSE;
+
+	CChannel* lpCyclerChannel = pMgr->GetSelectedChannel();
+
+	if (!lpCyclerChannel)
+		return FALSE;
+
+	//
+	CMgrSchedule* lpScheduleInfo = new CMgrSchedule();
+	BOOL bIsResult = lpScheduleInfo->LoadScheduleXml(GetScheduleFilePath());
+
+	if (bIsResult == FALSE)
+	{
+		return FALSE;
+	}
+
+	CList< CCycle*, CCycle* >& listCycle = lpScheduleInfo->GetCycleList();
+
+	for (int i = 0; i < listCycle.GetSize(); ++i)
+	{
+		CString strValue;
+		strValue.Format("%d", i + 1);
+
+		((CComboBox*)GetDlgItem(IDC_CMB_EDIT_SCHEDULE_INFO_CYCLE))->AddString(strValue);
+		((CComboBox*)GetDlgItem(IDC_CMB_EDIT_SCHEDULE_INFO_CYCLE))->SetCurSel(0);
+	}
+
+	auto firstCycle = listCycle.GetHead();
+	auto totalCycleLoop = firstCycle->GetLoopCount();
+	
+	CString msg;
+	msg.Format("1~%d th able", totalCycleLoop);
+
+	SetDlgItemText(IDC_STATIC_CYCLE_LOOP_RANGE, msg);
+
+	CList< CStep*, CStep* >& listStep = lpScheduleInfo->GetStepList();
+	auto pos = listStep.GetHeadPosition();
+	while (pos != NULL) {
+		auto step = listStep.GetNext(pos);
+		if (step->GetCycleNumber() == 1) {
+
+			CString strValue;
+			switch (step->GetStepType())
+			{
+				case eIFBoardStepTypeRest: strValue.Format("%d Rest", step->GetStepNumber());		break;
+				case eIFBoardStepTypeCharge: strValue.Format("%d Charge", step->GetStepNumber());		break;
+				case eIFBoardStepTypeDischarge: strValue.Format("%d Discharge", step->GetStepNumber());		break;
+				case eIFBoardStepTypeExternalPattern: strValue.Format("%d Pattern", step->GetStepNumber());		break;
+			}
+
+			((CComboBox*)GetDlgItem(IDC_CMB_EDIT_SCHEDULE_INFO_STEP))->AddString(strValue);
+			((CComboBox*)GetDlgItem(IDC_CMB_EDIT_SCHEDULE_INFO_STEP))->SetCurSel(0);
+		}
+	}
+
+	if (lpScheduleInfo)
+	{
+		delete lpScheduleInfo;
+		lpScheduleInfo = nullptr;
+	}
+
+	return TRUE;
+}
+
+void	CDlgEditScheduleInfo::LoadGroupCombo()
+{
+
+}
+
+void	CDlgEditScheduleInfo::LoadMaterial()
+{
+	m_listMaterial.DeleteAllItems();
+
+	CMgrChannel* pMgr = CMgrChannel::GetMgr();
+
+	if (pMgr)
+	{
+		std::vector<CString> vecValue;
+		pMgr->GetSelectedCyclerChannel(vecValue);
+
+		auto iter = vecValue.begin();
+		auto iterE = vecValue.end();
+
+		int nIndex = 0;
+
+		while (iter != iterE)
+		{
+			LVITEM Item;
+
+			Item.iItem		= nIndex;
+			Item.mask		= LVIF_TEXT | LVIF_PARAM;
+			Item.stateMask	= LVIS_STATEIMAGEMASK;
+			Item.state		= INDEXTOSTATEIMAGEMASK(1);
+			Item.pszText	= _T("");
+			Item.iSubItem	= 0;
+
+			m_listMaterial.InsertItem(&Item);
+
+			m_listMaterial.SetItemText(nIndex, 0, "");
+			m_listMaterial.SetItemText(nIndex, 1, (*iter));
+			m_listMaterial.SetItemText(nIndex, 2, "");
+
+			nIndex++;
+
+			++iter;
+		}
+	}	
+
+	GetDlgItem(IDC_EDIT_MATERIAL_ID)->SetWindowText("");
+}
+
+void	CDlgEditScheduleInfo::SaveHistory()
+{
+	CMgrScheduleHistory* pMgrScheduleHistory = CMgrScheduleHistory::GetMgr();
+
+	if (pMgrScheduleHistory)
+	{
+		pMgrScheduleHistory->SetNewItem(eScheduleHistoryTypeUserName, GetUserName());
+		pMgrScheduleHistory->SetNewItem(eScheduleHistoryTypeSampleName, GetWorkName());
+		pMgrScheduleHistory->SetNewItem(eScheduleHistoryTypeEquipName, GetEQPID());	
+		pMgrScheduleHistory->SetNewItem(eScheduleHistoryTypeScheduleName, GetScheduleName());
+		pMgrScheduleHistory->SetNewItem(eScheduleHistoryTypeSchedulePath, GetScheduleFilePath());
+		pMgrScheduleHistory->SetNewItem(eScheduleHistoryTypeLogFilePath, GetLogFilePath());
+		pMgrScheduleHistory->SetNewItem(eScheduleHistoryTypeDescription, GetDescription());
+	}
+}
+
+void	CDlgEditScheduleInfo::ExecProcScheduleView()
+{
+	CMgrModel* pMgr = CMgrModel::GetMgr();
+
+	if (pMgr)
+	{
+		SModel* lpModel = pMgr->GetModel(pMgr->GetModelIndex());
+
+		if (lpModel)
+		{
+			SSchedule* lpSchedule = lpModel->GetSchedule(pMgr->GetScheduleIndex());
+
+			if (lpSchedule)
+			{
+				CDlgViewScheduleInfo* lpScheduleInfo = CDlgViewScheduleInfo::GetMgr();
+
+				if (lpScheduleInfo)
+				{
+					lpScheduleInfo->ShowWindow(SW_HIDE);
+					lpScheduleInfo->ShowViewScheduleInfo(lpModel, lpSchedule);
+				}
+			}
+		}
+	}
+}
+void	CDlgEditScheduleInfo::ExecProcScheduleStart()
+{
+	SYSLOG(Operation, _T("Execute the worker schedule start command"));
+
+#ifndef _DEBUG
+	if (false == IsEnableScheduleStart())
+	{
+		AfxMessageBox("It cannot start because the charger/discharger is not connected.");
+
+		return;
+	}
+#endif
+
+	// 없어서는 안되는 항목들 체크 하고 넘어가자
+
+	int nStartCycle = GetStartCycle();
+	int nStartStep	= GetStartStep();
+
+	if (nStartCycle <= 0 || nStartStep <= 0)
+	{
+		AfxMessageBox("It cannot be started because the start position of the recipe is not specified.");
+
+		return;
+	}
+
+	// 여기서 동기화 선택 여부에 따라서 첫번째 예외처리를 한다.
+	int nSyncMode = GetSyncMode();
+
+	if (eScheduleSyncModeStep == nSyncMode)
+	{
+		if (false == IsStepSyncValidate())
+		{
+			AfxMessageBox("During step sync, you can proceed with two or more channels selected.");
+
+			return;
+		}
+	}
+	else if (eScheduleSyncModeTemperature == nSyncMode)
+	{
+		if (false == IsTemperatureSyncValidate())
+		{
+			AfxMessageBox("During Temp sync, it is possible to proceed with the chamber temperature change history.");
+
+			return;
+		}
+	}		
+
+	CMgrAccount* pMgrAccount = CMgrAccount::GetMgr();
+
+	if (pMgrAccount)
+	{
+		sAccount* lpAccount = pMgrAccount->GetLoginedAccount();
+
+		if (lpAccount)
+		{
+			CString strFilePath;
+			GetDlgItem(IDC_EDIT_EDIT_SCHEDULE_INFO_FILE_PATH)->GetWindowText(strFilePath);
+
+			_tcscpy_s(lpAccount->szSaveFilePath, strFilePath);
+
+			pMgrAccount->SaveAccount();
+		}
+	}	
+
+	CMgrChannel* pMgr = CMgrChannel::GetMgr();
+
+	if (pMgr)
+	{
+		SaveHistory();
+
+		SStartSchedule kParser;
+
+		kParser.nStartCycleNumber	= nStartCycle;
+		kParser.nStartStepNumber	= nStartStep;
+		kParser.nSyncMode			= nSyncMode;
+		kParser.strEQPID			= GetEQPID();
+		kParser.strScheduleFilePath = GetScheduleFilePath();
+		kParser.strScheduleName		= GetScheduleName();
+		kParser.strUserID			= GetUserName();
+		kParser.strWorkName			= GetWorkName();
+		kParser.strLogFilePath		= GetLogFilePath();
+		kParser.bScheduleName		= IsDlgButtonChecked(IDC_CHECK_SCHNAME);
+		kParser.bTime				= IsDlgButtonChecked(IDC_CHECK_TIME);
+
+		GetCellID(kParser.vecCellID);
+
+		GetCyclerChannelNumber(kParser.vecCyclerChannelNumber);
+
+		//중복 불가하게 수정해야함 pnx_hr 2021.04.29
+		//스케줄 시작시 eScheduleLoadingTypeAdd으로 타입 전환됨
+		if (eScheduleLoadingTypeAdd == m_nScheduleLoadingType)
+		{
+			pMgr->StartSchedule(kParser);
+		}	
+		//eScheduleLoadingTypeAppend 모드 (스케줄 예약모드)
+		else
+			pMgr->ScheduleAppend(kParser);
+		TRACE("m_nScehduleLoadingType = %d", m_nScheduleLoadingType);
+
+		CWnd* pWnd = AfxGetApp()->GetMainWnd();
+		if (pWnd)
+		{
+			auto iterE = kParser.vecCyclerChannelNumber.end();
+			iterE--;
+			::PostMessage(pWnd->GetSafeHwnd(), WM_VIEW_PATTERN, 0, *iterE);
+		}
+
+		ShowWindow(SW_HIDE);
+	}
+
+	
+}
+
+
+
+void	CDlgEditScheduleInfo::GetCellID(std::vector<CString>& vecValue)
+{
+	CMgrChannel* pMgr = CMgrChannel::GetMgr();
+
+	if (pMgr)
+	{
+		int nSelectedCyclerChannelCount = pMgr->GetSelectCyclerChannelCount();
+
+		for (int i = 0; i < nSelectedCyclerChannelCount; ++i)
+		{
+			CString strValue = m_listMaterial.GetItemText(i, 2);
+
+			vecValue.push_back(strValue);			
+		}
+	}
+}
+
+void	CDlgEditScheduleInfo::GetCyclerChannelNumber(std::vector<int>& vecValue)
+{
+	vecValue.clear();
+
+	CMgrChannel* pMgr = CMgrChannel::GetMgr();
+
+	if (!pMgr)
+		return;
+
+	CList< CChannel*, CChannel* >& listCyclerChannel = pMgr->GetChannelList();
+
+	auto Pos = listCyclerChannel.GetHeadPosition();
+
+	while (Pos)
+	{
+		CChannel* lpCyclerChannel = listCyclerChannel.GetNext(Pos);
+
+		if (!lpCyclerChannel)
+			continue;
+
+		if (!lpCyclerChannel->GetSelected())
+			continue;
+
+		vecValue.push_back(lpCyclerChannel->GetChannelNumber());
+	}
+}
+
+bool	CDlgEditScheduleInfo::IsStepSyncValidate()
+{
+	// 스텝 동기화를 할때는 2개 이상의 채널이 선택되어 있어야 한다.
+	CMgrChannel* pMgr = CMgrChannel::GetMgr();
+
+	if (!pMgr)
+		return false;
+
+	int nSelectCyclerChannelCount = pMgr->GetSelectCyclerChannelCount();
+
+	if (nSelectCyclerChannelCount <= 1)
+		return false;
+
+	int nChamberKey = -1;
+
+	CList< CChannel*, CChannel* >& listCyclerChannel = pMgr->GetChannelList();
+
+	auto Pos = listCyclerChannel.GetHeadPosition();
+
+	while (Pos)
+	{
+		CChannel* lpCyclerChannel = listCyclerChannel.GetNext(Pos);
+
+		if(nullptr == lpCyclerChannel)
+			continue;
+
+		if(false == lpCyclerChannel->GetSelected())
+			continue;
+
+		CMgrComm* pMgrComm = CMgrComm::GetMgr();
+
+		if (!pMgrComm)
+			continue;
+
+		if (pMgrComm->GetDeviceKeyFromType(eDeviceTypeChamber, lpCyclerChannel->GetChannelNumber()) < 0)
+			return false;
+
+		if(nChamberKey == -1)
+			nChamberKey = pMgrComm->GetDeviceKeyFromType(eDeviceTypeChamber, lpCyclerChannel->GetChannelNumber());
+		else
+		{
+			if (nChamberKey != pMgrComm->GetDeviceKeyFromType(eDeviceTypeChamber, lpCyclerChannel->GetChannelNumber()))
+				return true;
+		}
+	}
+
+	return true;
+}
+
+bool	CDlgEditScheduleInfo::IsTemperatureSyncValidate()
+{
+	CMgrChannel* pMgr = CMgrChannel::GetMgr();
+
+	if (!pMgr)
+		return false;
+
+	CChannel* lpCyclerChannel = pMgr->GetSelectedChannel();
+
+	if (!lpCyclerChannel)
+		return false;
+
+	CMgrSchedule* lpScheduleInfo = lpCyclerChannel->GetMgr();
+
+	if (!lpScheduleInfo)
+		return false;
+
+	// 지금 선택한 채널이 1개인 경우 -> 나머지 채널이 진행중인지 체크
+	// 3. 나머지 채널 진행중이다 and 지금 채널이 온도 변경이 있다 = false;		ok
+	// 4. 나머지 채널 진행중이다 and 직므 채널이 온도 변경이 없다  = true;		ok
+
+	int nSelectCyclerChannelCount = pMgr->GetSelectCyclerChannelCount();
+
+	if (1 == nSelectCyclerChannelCount)
+	{
+		CMgrComm* pMgrComm = CMgrComm::GetMgr();
+
+		if (!pMgrComm)
+			return false;
+
+		int nExecCyclerChannel = pMgrComm->GetCyclerChannelFromDevice(eDeviceTypeChamber, lpCyclerChannel->GetChannelNumber());
+
+		if (nExecCyclerChannel < 0)
+			return false;
+
+		CChannel* lpExeCyclerChannel = pMgr->GetChannel(nExecCyclerChannel);
+
+		if (!lpExeCyclerChannel)
+			return false;
+
+		if (true == lpExeCyclerChannel->GetScheduleStart())
+		{
+			{
+				CMgrSchedule* lpExeSchedule = lpExeCyclerChannel->GetMgr();
+
+				if (!lpExeSchedule)
+					return false;
+
+				CList< CStep*, CStep* >& listExeStep = lpExeSchedule->GetStepList();
+
+				auto Pos = listExeStep.GetHeadPosition();
+
+				while (Pos)
+				{
+					CStep* lpStep = listExeStep.GetNext(Pos);
+
+					if (!lpStep)
+						continue;
+
+					float fValue = lpStep->GetChamberSetTemp();
+
+					// 얘는 이미 돌고 있는 스케줄이 온도 변경하는 놈이다.
+					if (fValue != 0.000f)
+						return false;
+				}
+			}			
+
+			{
+				CMgrSchedule* lpModifyScheduleInfo = new CMgrSchedule;
+				lpModifyScheduleInfo->LoadScheduleXml(GetScheduleFilePath());
+
+				CList< CStep*, CStep* >& listStep = lpModifyScheduleInfo->GetStepList();
+
+				if (listStep.GetSize() <= 0)
+				{
+					delete lpModifyScheduleInfo;
+					lpModifyScheduleInfo = nullptr;
+
+					return false;
+				}
+
+				auto Pos = listStep.GetHeadPosition();
+
+				while (Pos)
+				{
+					CStep* lpStep = listStep.GetNext(Pos);
+
+					if (!lpStep)
+						continue;
+
+					float fValue = lpStep->GetChamberSetTemp();
+
+					if (fValue != 0.000f)
+					{
+						delete lpModifyScheduleInfo;
+						lpModifyScheduleInfo = nullptr;
+
+						return false;
+					}
+				}
+
+				delete lpModifyScheduleInfo;
+				lpModifyScheduleInfo = nullptr;
+			}			
+		}
+	}
+
+	{
+		CMgrSchedule* lpModifyScheduleInfo = new CMgrSchedule;
+		lpModifyScheduleInfo->LoadScheduleXml(GetScheduleFilePath());
+
+		CList< CStep*, CStep* >& listStep = lpModifyScheduleInfo->GetStepList();
+
+		if (listStep.GetSize() <= 0)
+		{
+			delete lpModifyScheduleInfo;
+			lpModifyScheduleInfo = nullptr;
+
+			return false;
+		}
+
+		auto Pos = listStep.GetHeadPosition();
+
+		while (Pos)
+		{
+			CStep* lpStep = listStep.GetNext(Pos);
+
+			if (!lpStep)
+				continue;
+
+			float fValue = lpStep->GetChamberSetTemp();
+
+			if (fValue != 0.000f)
+			{
+				delete lpModifyScheduleInfo;
+				lpModifyScheduleInfo = nullptr;
+
+				return true;
+			}
+		}
+
+		delete lpModifyScheduleInfo;
+		lpModifyScheduleInfo = nullptr;
+
+		return false;
+	}
+}
+
+bool	CDlgEditScheduleInfo::IsEnableScheduleStart()
+{
+	CMgrChannel* pMgr = CMgrChannel::GetMgr();
+
+	if (!pMgr)
+		return false;
+
+	CMgrComm* pMgrComm = CMgrComm::GetMgr();
+
+	if (!pMgrComm)
+		return false;
+
+	CSockProc* lpDevice = CSockProc::GetMgr();
+
+	if (!lpDevice)
+		return false;
+
+	CList< CChannel*, CChannel* >& listCyclerChannel = pMgr->GetChannelList();
+
+	auto Pos = listCyclerChannel.GetHeadPosition();
+
+	while (Pos)
+	{
+		CChannel* lpCyclerChannel = listCyclerChannel.GetNext(Pos);
+
+		if(!lpCyclerChannel)
+			continue;
+
+		if(!lpCyclerChannel->GetSelected())
+			continue;
+
+		int nIFBoardNumber = pMgrComm->GetBoardNumber(lpCyclerChannel->GetChannelNumber());
+
+		CClientSocket* lpIFBoard = lpDevice->GetAt(nIFBoardNumber);
+
+		if (!lpIFBoard)
+			return false;
+		if (FALSE == lpIFBoard->GetConnect(lpIFBoard->GetPrimaryKey()))
+			return false;
+		//if (FALSE == pSocket->GetConnect())
+		//	return false;
+	/*	if (FALSE == lpIFBoard->GetConnect())
+			return false;	*/	
+	}
+
+	return true;
+}
+
+int		CDlgEditScheduleInfo::GetStartCycle()
+{
+	/*int nCurSel = ((CComboBox*)GetDlgItem(IDC_CMB_EDIT_SCHEDULE_INFO_CYCLE))->GetCurSel();
+
+	if (nCurSel >= 0)
+	{
+		CString strValue;
+		((CComboBox*)GetDlgItem(IDC_CMB_EDIT_SCHEDULE_INFO_CYCLE))->GetLBText(nCurSel, strValue);
+
+		return atoi(strValue);
+	}
+
+	return 0;*/
+	CString strValue;
+	((CComboBox*)GetDlgItem(IDC_CMB_EDIT_SCHEDULE_INFO_CYCLE))->GetWindowTextA(strValue);
+
+	return atoi(strValue);
+}
+
+int		CDlgEditScheduleInfo::GetStartStep()
+{
+#if 0
+
+	int nCurSel = ((CComboBox*)GetDlgItem(IDC_CMB_EDIT_SCHEDULE_INFO_STEP))->GetCurSel();
+	CString strValue;
+	if (nCurSel >= 0)
+	{
+		((CComboBox*)GetDlgItem(IDC_CMB_EDIT_SCHEDULE_INFO_STEP))->GetLBText(nCurSel, strValue);
+
+		return atoi(strValue);
+	}
+	return 0;
+#endif // 0
+	//CString strValue;
+	//((CComboBox*)GetDlgItem(IDC_CMB_EDIT_SCHEDULE_INFO_STEP))->GetWindowTextA(strValue);
+	//return atoi(strValue);
+
+	return ((CComboBox*)GetDlgItem(IDC_CMB_EDIT_SCHEDULE_INFO_STEP))->GetCurSel() + 1;
+}
+
+int		CDlgEditScheduleInfo::GetSyncMode()
+{
+	if (TRUE == ((CButton*)GetDlgItem(IDC_RDO_EDIT_SCHEDULE_SYNC_1))->GetCheck())
+		return eScheduleSyncModeNotUse;
+	else if (TRUE == ((CButton*)GetDlgItem(IDC_RDO_EDIT_SCHEDULE_SYNC_2))->GetCheck())
+		return eScheduleSyncModeTemperature;
+	else if (TRUE == ((CButton*)GetDlgItem(IDC_RDO_EDIT_SCHEDULE_SYNC_3))->GetCheck())
+		return eScheduleSyncModeStep;
+
+	return eScheduleSyncModeNotUse;
+}
+
+CString	CDlgEditScheduleInfo::GetSelectedCyclerChannelCount()
+{
+	CMgrChannel* pMgr = CMgrChannel::GetMgr();
+
+	if (!pMgr)
+		return _T("Total 0 Channel");
+
+	int nCyclerChannelCount = 0;
+
+	CList< CChannel*, CChannel* >& listCyclerChannel = pMgr->GetChannelList();
+
+	auto Pos = listCyclerChannel.GetHeadPosition();
+
+	while (Pos)
+	{
+		CChannel* lpCyclerChannel = listCyclerChannel.GetNext(Pos);
+
+		if (!lpCyclerChannel)
+			continue;
+
+		if (lpCyclerChannel->GetSelected())
+			nCyclerChannelCount++;
+	}
+
+	CString strSelectedCyclerChannelCount;
+	strSelectedCyclerChannelCount.Format("Total %d Channels", nCyclerChannelCount);
+
+	return strSelectedCyclerChannelCount;
+}
+
+CString	CDlgEditScheduleInfo::GetSelectedCyclerChannel()
+{
+	CMgrChannel* pMgr = CMgrChannel::GetMgr();
+
+	if (!pMgr)
+		return _T("");
+
+	CString strSelectedCyclerChannel;
+
+	CList< CChannel*, CChannel* >& listCyclerChannel = pMgr->GetChannelList();
+
+	auto Pos = listCyclerChannel.GetHeadPosition();
+
+	while (Pos)
+	{
+		CChannel* lpCyclerChannel = listCyclerChannel.GetNext(Pos);
+
+		if(!lpCyclerChannel)
+			continue;
+
+		if (lpCyclerChannel->GetSelected())
+		{
+			CString strCyclerChannel;
+			strCyclerChannel.Format("Channel%d", lpCyclerChannel->GetChannelNumber() + 1);
+
+			strSelectedCyclerChannel += strCyclerChannel;
+			strSelectedCyclerChannel += ",";
+		}
+	}
+
+	strSelectedCyclerChannel.TrimRight(",");
+
+	return strSelectedCyclerChannel;
+}
+
+CString CDlgEditScheduleInfo::GetUserName()
+{
+	CString strValue;
+	GetDlgItem(IDC_EDIT_EDIT_SCHEDULE_INFO_WORKER)->GetWindowText(strValue);
+
+	if (strValue.IsEmpty())
+	{
+		// MES 연동 부분에 작업자, 설명이 있다. 이걸로 넣어야 하나??
+		CMgrAccount* pMgrAccount = CMgrAccount::GetMgr();
+
+		if (pMgrAccount)
+		{
+			return pMgrAccount->GetLoginID();
+		}
+	}
+
+	return "";
+}
+
+CString	CDlgEditScheduleInfo::GetWorkName()
+{
+	CString strValue;
+	GetDlgItem(IDC_EDIT_EDIT_SCHEDULE_INFO_WORK_NAME)->GetWindowText(strValue);
+
+	return strValue;
+}
+
+CString CDlgEditScheduleInfo::GetEQPID()
+{
+	CMgrConfig* pMgrConfig = CMgrConfig::GetMgr();
+
+	if (pMgrConfig)
+	{
+		return pMgrConfig->GetCyclerEQPID();
+	}
+
+	return "";
+}
+
+CString CDlgEditScheduleInfo::GetScheduleName()
+{
+	CMgrModel* pMgr = CMgrModel::GetMgr();
+
+	if (pMgr)
+	{
+		SModel* lpModel = pMgr->GetModel(pMgr->GetModelIndex());
+
+		if (!lpModel)
+			return "";
+
+		SSchedule* lpSchedule = lpModel->GetSchedule(pMgr->GetScheduleIndex());
+
+		if (!lpSchedule)
+			return "";
+
+		return lpSchedule->strScheduleName;
+	}
+
+	return "";
+}
+
+CString CDlgEditScheduleInfo::GetScheduleFilePath()
+{
+	CMgrModel* pMgr = CMgrModel::GetMgr();
+
+	if (pMgr)
+	{
+		SModel* lpModel = pMgr->GetModel(pMgr->GetModelIndex());
+
+		if (!lpModel)
+			return "";
+
+		SSchedule* lpSchedule = lpModel->GetSchedule(pMgr->GetScheduleIndex());
+
+		if (!lpSchedule)
+			return "";
+
+		return lpSchedule->strScheduleFilePath;
+	}
+
+	return "";
+}
+
+CString CDlgEditScheduleInfo::GetLogFilePath()
+{
+	CString strValue;
+	GetDlgItem(IDC_EDIT_EDIT_SCHEDULE_INFO_FILE_PATH)->GetWindowText(strValue);
+
+	return strValue;
+}
+
+CString CDlgEditScheduleInfo::GetDescription()
+{
+	CString strValue;
+	GetDlgItem(IDC_EDIT_EDIT_SCHEDULE_INFO_DESCRIPTION)->GetWindowText(strValue);
+
+	return strValue;	
+}
+
+void CDlgEditScheduleInfo::OnClickListEditScheduleInfoWorkName(NMHDR *pNMHDR, LRESULT *pResult)
+{
+	LPNMITEMACTIVATE pNMItemActivate = reinterpret_cast<LPNMITEMACTIVATE>(pNMHDR);
+
+	int nCurSel = pNMItemActivate->iItem;
+
+	if (nCurSel >= 0)
+	{
+		CMgrScheduleHistory* pMgr = CMgrScheduleHistory::GetMgr();
+
+		if (pMgr)
+		{
+			StringList* listWorkName = pMgr->GetItem(eScheduleHistoryTypeSampleName);
+
+			if (listWorkName)
+			{
+				if ((int)listWorkName->size() > nCurSel)
+				{
+					auto iter = listWorkName->begin();
+
+					std::advance(iter, nCurSel);
+
+					CString strWorkName = (*iter);
+
+					GetDlgItem(IDC_EDIT_EDIT_SCHEDULE_INFO_WORK_NAME)->SetWindowText(strWorkName);
+				}			
+			}
+		}
+	}
+
+	*pResult = 0;
+}
+
+
+void CDlgEditScheduleInfo::OnDblclkListEditScheduleInfoMaterial(NMHDR *pNMHDR, LRESULT *pResult)
+{
+	LPNMITEMACTIVATE pNMItemActivate = reinterpret_cast<LPNMITEMACTIVATE>(pNMHDR);
+
+	m_nMaterialItem		= pNMItemActivate->iItem;
+	m_nMaterialSubItem	= pNMItemActivate->iSubItem;
+
+	if (m_nMaterialItem >= 0 && m_nMaterialSubItem > 1)
+	{
+		CRect rect;
+
+		if (m_nMaterialSubItem == 0)
+		{
+			m_listMaterial.GetItemRect(m_nMaterialItem, rect, LVIR_BOUNDS);
+			rect.right = rect.left + m_listMaterial.GetColumnWidth(0);
+		}
+		else
+		{
+			m_listMaterial.GetSubItemRect(m_nMaterialItem, m_nMaterialSubItem, LVIR_BOUNDS, rect);
+		}
+
+		m_listMaterial.ClientToScreen(rect);
+		this->ScreenToClient(rect);
+
+		GetDlgItem(IDC_EDIT_MATERIAL_ID)->SetWindowText(m_listMaterial.GetItemText(m_nMaterialItem, m_nMaterialSubItem));
+		GetDlgItem(IDC_EDIT_MATERIAL_ID)->SetWindowPos(NULL, rect.left, rect.top, rect.right - rect.left, rect.bottom - rect.top, SWP_SHOWWINDOW);
+		GetDlgItem(IDC_EDIT_MATERIAL_ID)->SetFocus();
+	}
+
+	*pResult = 0;
+}
+
+
+void CDlgEditScheduleInfo::OnMeasureItem(int nIDCtl, LPMEASUREITEMSTRUCT lpMeasureItemStruct)
+{
+	// TODO: 여기에 메시지 처리기 코드를 추가 및/또는 기본값을 호출합니다.
+
+	if (nIDCtl == IDC_LIST_MATERIAL)
+	{
+		lpMeasureItemStruct->itemHeight += 20;
+	}
+
+	__super::OnMeasureItem(nIDCtl, lpMeasureItemStruct);
+}
+
+
+
+
+void CDlgEditScheduleInfo::OnCbnEditchangeCmbEditScheduleInfoCycle()
+{
+	// TODO: 여기에 컨트롤 알림 처리기 코드를 추가합니다.
+	m_nEnterKeyEvent = DEFINE_ENTER_START_CYCLE;
+}
+void CDlgEditScheduleInfo::OnCbnSelchangeCmbEditScheduleInfoCycle()
+{
+	// TODO: 여기에 컨트롤 알림 처리기 코드를 추가합니다.
+	m_nEnterKeyEvent = DEFINE_ENTER_START_CYCLE;
+
+	CMgrSchedule* lpScheduleInfo = new CMgrSchedule();
+	lpScheduleInfo->LoadScheduleXml(GetScheduleFilePath());
+
+	((CComboBox*)GetDlgItem(IDC_CMB_EDIT_SCHEDULE_INFO_STEP))->ResetContent();
+	int nCycle = ((CComboBox*)GetDlgItem(IDC_CMB_EDIT_SCHEDULE_INFO_CYCLE))->GetCurSel();	
+	int nCount = lpScheduleInfo->getScheduleStepCountXml(GetScheduleFilePath(), nCycle+1);  // 2021-04-14
+
+
+	CList< CStep*, CStep* >& listStep = lpScheduleInfo->GetStepList();
+	auto pos = listStep.GetHeadPosition();
+	while (pos != NULL)	{
+		auto step = listStep.GetNext(pos);
+		if (step->GetCycleNumber() == (nCycle + 1)) {
+			
+			CString strValue;
+			switch (step->GetStepType())
+			{
+				case eIFBoardStepTypeRest: strValue.Format("%d (Rest)", step->GetStepNumber());		break;
+				case eIFBoardStepTypeCharge: strValue.Format("%d (Charge)", step->GetStepNumber());		break;
+				case eIFBoardStepTypeDischarge: strValue.Format("%d (Discharge)", step->GetStepNumber());		break;
+				case eIFBoardStepTypeExternalPattern: strValue.Format("%d (Pattern)", step->GetStepNumber());		break;
+			}
+
+			((CComboBox*)GetDlgItem(IDC_CMB_EDIT_SCHEDULE_INFO_STEP))->AddString(strValue);
+			((CComboBox*)GetDlgItem(IDC_CMB_EDIT_SCHEDULE_INFO_STEP))->SetCurSel(0);
+		}
+	}
+
+
+	CList< CCycle*, CCycle* >& listCycle = lpScheduleInfo->GetCycleList();
+	pos = listCycle.GetHeadPosition();
+	CCycle* cycle = NULL;
+
+	for (int i = 0; i <= nCycle; i++) {
+		cycle = listCycle.GetNext(pos);
+	}
+	
+	auto totalCycleLoop = cycle->GetLoopCount();
+
+	CString msg;
+	msg.Format("1~%d th able", totalCycleLoop);
+
+	SetDlgItemText(IDC_STATIC_CYCLE_LOOP_RANGE, msg);
+
+
+	if (lpScheduleInfo)
+	{
+		delete lpScheduleInfo;
+		lpScheduleInfo = nullptr;
+	}
+	CString strLoopStart;
+	//strLoopStart.Format(_T("%d"), g_nCycleLoopStartSet[nCycle]);
+	strLoopStart.Format(_T("%d"), 1);
+	GetDlgItem(IDC_EDT_CYCLE_LOOP_COUNT)->SetWindowTextA(strLoopStart);
+}
+
+void CDlgEditScheduleInfo::OnCbnEditchangeCmbEditScheduleInfoStep()
+{
+	// TODO: 여기에 컨트롤 알림 처리기 코드를 추가합니다.
+	m_nEnterKeyEvent = DEFINE_ENTER_START_STEP;
+}
+
+void CDlgEditScheduleInfo::OnCbnSelchangeCmbEditScheduleInfoStep()
+{
+	// TODO: 여기에 컨트롤 알림 처리기 코드를 추가합니다.
+	m_nEnterKeyEvent = DEFINE_ENTER_START_STEP;
+}
+
+
+void CDlgEditScheduleInfo::OnEnChangeEdtCycleLoopCount()
+{
+	// TODO:  RICHEDIT 컨트롤인 경우, 이 컨트롤은
+	// __super::OnInitDialog() 함수를 재지정 
+	//하고 마스크에 OR 연산하여 설정된 ENM_CHANGE 플래그를 지정하여 CRichEditCtrl().SetEventMask()를 호출하지 않으면
+	// 이 알림 메시지를 보내지 않습니다.
+
+	// TODO:  여기에 컨트롤 알림 처리기 코드를 추가합니다.
+	int nCycle = ((CComboBox*)GetDlgItem(IDC_CMB_EDIT_SCHEDULE_INFO_CYCLE))->GetCurSel();
+
+	CString strLoopStart;
+	GetDlgItem(IDC_EDT_CYCLE_LOOP_COUNT)->GetWindowTextA(strLoopStart);
+	g_nCycleLoopStartSet[nCycle] = (int)_ttoi(strLoopStart);
+
+	if (g_nCycleLoopStartSet[nCycle] > 1)
+	{
+		if (g_nScheduleCycleLoop[nCycle] <= g_nCycleLoopStartSet[nCycle])
+		{
+			CString strmsg;
+			strmsg.Format(_T("Check the number of repetitions and enter it again.\r\nSchecdule Cycle[%d] Number of repetitions [%d]"), nCycle + 1, g_nScheduleCycleLoop[nCycle]);
+			AfxMessageBox(strmsg);
+			g_nCycleLoopStartSet[nCycle] = 1;
+			strLoopStart.Format(_T("%d"), g_nCycleLoopStartSet[nCycle]);
+			GetDlgItem(IDC_EDT_CYCLE_LOOP_COUNT)->SetWindowTextA(strLoopStart);
+		}
+	}
+}

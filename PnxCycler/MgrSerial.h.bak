@@ -1,0 +1,40 @@
+#pragma once
+
+#include "Singleton.h"
+#include "QueuingSerial.h"
+#include "ZebraBCRControl.h"	//BCR
+
+#include <map>
+
+class CMgrSerial : public CSingleton< CMgrSerial >
+{
+public:
+	CMgrSerial();
+	virtual ~CMgrSerial();
+
+	void	StartThread();
+	void	StopThread();
+
+	void	AddQueue(int nPrimaryKey, CString strTime, BYTE* pszData, int nDataLenth=0);
+	void	AddQueue(int nCommType, BYTE* pszData);
+	void	AddQueue(int nPrimaryKey, CString strTime, float fValue);
+	void	AddQueue(int nPrimaryKey, CString strTime, float fValue, int nType);
+	void	AddQueue(int nPrimaryKey, CString strTime, int nElecType, float fValue);
+	void	AddQueue(int nPrimaryKey, CString strTime, char* pData);
+
+	CQueuingSerial*	GetAt(int nPrimaryKey);
+
+
+	CZebraBCRControl*						m_pZebraBCRControl;
+
+	//220331 YGYUN Barcode 관련 추가 
+	CString m_strBarcode;
+	CString GetBarcode();
+	void SetBarcode(CString strBarcode);
+
+private:
+	std::map< int, CQueuingSerial* > m_mapSerial;
+private:
+	void	RemoveAll();
+};
+

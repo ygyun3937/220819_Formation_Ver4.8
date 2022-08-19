@@ -1,0 +1,87 @@
+#pragma once
+
+#include "Singleton.h"
+#include "CCalibratorSocket.h"
+
+class CCalibratorProcess : public CWnd, public CSingleton< CCalibratorProcess >
+{
+public:
+	CCalibratorProcess();
+	virtual ~CCalibratorProcess();
+
+public:
+	//afx_msg LRESULT	OnReceive(WPARAM wParam, LPARAM lParam);
+
+public:
+	bool	InitializeVariables();
+
+	bool	SocketConnect();
+	bool	SocketDisconnect();
+
+	bool	CreateSocket();
+	bool	CloseSocket();
+
+	bool	StartThread();
+	bool	StopThread();
+
+	bool	SendCalibratorCommand(CString strCmd);
+	CString	ReceiveCalibratorCommand();
+
+public:
+	void	SetMeasureData(int nMode) { m_nMeasureData = nMode; }
+	int		GetMeasureData() { return m_nMeasureData; }
+
+	void	SetCalibratorIP(CString ipAddress) { m_strCalibratorIP = ipAddress; }
+	void	SetCalibratorPort(int nPortNo) { m_nCalibratorPort = nPortNo; }
+
+	void	SetMeasureCount(int nMeasureCount) { m_nMeasureCount = nMeasureCount; }
+	int		GetMeasureCount() { return m_nMeasureCount; }
+
+	void	SetCalibratorVoltage(float fSetValue) { m_fCalibratorVoltage = fSetValue; }
+	float	GetCalibratorVoltage() { return m_fCalibratorVoltage; }
+
+	void	SetCalibratorVoltageAvg(float fSetValue) { m_fCalibratorVoltageAvg = fSetValue; }
+	float	GetCalibratorVoltageAvg() { return m_fCalibratorVoltageAvg; }
+
+	void	SetCalibratorAmpere(float fSetValue) { m_fCalibratorAmpere = fSetValue; }
+	float	GetCalibratorAmpere() { return m_fCalibratorAmpere; }
+
+	void	SetCalibratorAmpereAvg(float fSetValue) { m_fCalibratorAmpereAvg = fSetValue; }
+	float	GetCalibratorAmpereAvg() { return m_fCalibratorAmpereAvg; }
+
+	void	SetCalibratorAverage(float fSetValue) { m_fCalibratorAverage = fSetValue; }
+	float	GetCalibratorAverage() { return m_fCalibratorAverage; }
+
+private:
+	static UINT	CalibratorMeasureThread(LPVOID pParam);
+
+	void	MeasureCalibrator();
+	float	GetCalibratorAverageDataCount(int nCount);
+	float	GetCalibratorMeasureVoltage();
+	float	GetCalibratorMeasureCurrent();
+
+private:
+	CWinThread*			m_pCalibratorThread;
+	bool				m_bLoopCalibrator;
+
+	CCalibratorSocket*	m_SyncSocket;
+	//CCalibratorSocket*	m_SyncSocket = new CCalibratorSocket(m_hWnd, 0);
+
+	// -------------------------------------------------------------------------
+
+	CString	m_strCalibratorIP;
+	int		m_nCalibratorPort;
+
+	HWND	m_hWnd;
+	
+	float	m_fShunt = 0.0;
+
+	int		m_nMeasureData;
+	int		m_nMeasureCount = 0;
+	float	m_fCalibratorVoltage;
+	float	m_fCalibratorVoltageAvg;
+	float	m_fCalibratorAmpere = 0.0;
+	float	m_fCalibratorAmpereAvg = 0.0;
+	float	m_fCalibratorAverage = 0.0;		// 사용하지않음?
+};
+

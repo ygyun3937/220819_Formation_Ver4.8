@@ -1,0 +1,96 @@
+﻿#pragma once
+
+
+// CDlgViewSchedulelist 대화 상자
+#include "Singleton.h"
+#include "ColorStaticST.h"
+
+class CDlgViewSchedulelist : public CDialogEx, public CSingleton<CDlgViewSchedulelist>
+{
+	DECLARE_DYNAMIC(CDlgViewSchedulelist)
+
+public:
+	CDlgViewSchedulelist(CWnd* pParent = nullptr);   // 표준 생성자입니다.
+	virtual ~CDlgViewSchedulelist();
+
+	enum { IDD = IDD_DLG_VIEW_SCHEDULE_LIST };
+
+protected:
+	virtual void DoDataExchange(CDataExchange* pDX);    // DDX/DDV 지원입니다.
+
+	DECLARE_MESSAGE_MAP()
+
+public:
+	virtual BOOL Create(CWnd* pParentWnd = NULL);
+	virtual BOOL PreTranslateMessage(MSG* pMsg);
+	virtual BOOL OnInitDialog();
+
+	afx_msg void OnShowWindow(BOOL bShow, UINT nStatus);
+	afx_msg void OnClose();
+	afx_msg void OnDestroy();
+	afx_msg HBRUSH OnCtlColor(CDC* pDC, CWnd* pWnd, UINT nCtlColor);
+
+	afx_msg void OnBnClickedBtnViewScheduleDetail();
+	afx_msg void OnBnClickedBtnViewScheduleApply();
+	afx_msg void OnBnClickedBtnViewScheduleCancel();
+	afx_msg void OnClickListViewScheduleModel(NMHDR *pNMHDR, LRESULT *pResult);
+	afx_msg void OnClickListViewScheduleSchedule(NMHDR *pNMHDR, LRESULT *pResult);	
+	
+public:
+	void	SetScheduleLoadingType(int nType) { m_nScheduleLoadingType = nType; }
+
+private:
+	enum eViewScheduleStaticObject
+	{
+		eViewScheduleStaticObjectTitle = 0,
+		eViewScheduleStaticObjectModelText,
+		eViewScheduleStaticObjectScheduleText,
+		eViewScheduleStaticObjectType,
+		eViewScheduleStaticObjectModelTitle,
+		eViewScheduleStaticObjectScheduleTitle,
+		eViewScheduleStaticObjectModelValue,
+		eViewScheduleStaticObjectScheduleValue,
+		eViewScheduleStaticObjectMaxCount
+	};
+
+	enum eViewScheduleListObejct
+	{
+		eViewScheduleListObejctSerial = 0,
+		eViewScheduleListObejctName,
+		eViewScheduleListObejctDescription,
+		eViewScheduleListObejctWriteTime,
+		eViewScheduleListObejctMaxCount
+	};
+
+private:
+	void	InitStatic();
+	void	InitListCtrl();
+	void	LoadSchedule();
+
+	void	DrawListFromModel();
+	void	DrawListFromSchedule();
+
+	void	ExecProcScheduleView();
+	void	ExecProcEditSchedule();
+
+	int		GetListCtrlColumnWidth(int nColumnIndex);
+
+private:
+	CColorStaticST m_ctrlText[eViewScheduleStaticObjectMaxCount];
+
+	CListCtrl	m_listModel;
+	CListCtrl	m_listSchedule;
+
+	CString		m_strScheduleFilePath;
+
+	int			m_nModelIndex;
+	int			m_nScheduleIndex;
+	int			m_nScheduleLoadingType;
+
+private:
+	CString		m_strEqpProcessMode;
+
+public:
+	void		SetEqpProcessMode(CString strMode) { m_strEqpProcessMode = strMode; }
+	
+};

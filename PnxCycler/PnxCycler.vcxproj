@@ -1,0 +1,509 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<Project DefaultTargets="Build" ToolsVersion="15.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <ItemGroup Label="ProjectConfigurations">
+    <ProjectConfiguration Include="Debug|Win32">
+      <Configuration>Debug</Configuration>
+      <Platform>Win32</Platform>
+    </ProjectConfiguration>
+    <ProjectConfiguration Include="Release|Win32">
+      <Configuration>Release</Configuration>
+      <Platform>Win32</Platform>
+    </ProjectConfiguration>
+  </ItemGroup>
+  <PropertyGroup Label="Globals">
+    <ProjectGuid>{5426151B-B3C9-4F5A-9427-77F5B10AEB8D}</ProjectGuid>
+    <RootNamespace>PnxCycler</RootNamespace>
+    <Keyword>MFCProj</Keyword>
+    <WindowsTargetPlatformVersion>10.0.19041.0</WindowsTargetPlatformVersion>
+    <ProjectName>PnxCycler</ProjectName>
+  </PropertyGroup>
+  <Import Project="$(VCTargetsPath)\Microsoft.Cpp.Default.props" />
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'" Label="Configuration">
+    <ConfigurationType>Application</ConfigurationType>
+    <UseDebugLibraries>true</UseDebugLibraries>
+    <CharacterSet>MultiByte</CharacterSet>
+    <UseOfMfc>Static</UseOfMfc>
+    <PlatformToolset>v141</PlatformToolset>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'" Label="Configuration">
+    <ConfigurationType>Application</ConfigurationType>
+    <UseDebugLibraries>false</UseDebugLibraries>
+    <PlatformToolset>v141</PlatformToolset>
+    <WholeProgramOptimization>true</WholeProgramOptimization>
+    <CharacterSet>MultiByte</CharacterSet>
+    <UseOfMfc>Static</UseOfMfc>
+  </PropertyGroup>
+  <Import Project="$(VCTargetsPath)\Microsoft.Cpp.props" />
+  <ImportGroup Label="ExtensionSettings">
+  </ImportGroup>
+  <ImportGroup Label="PropertySheets" Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
+    <Import Project="$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props" Condition="exists('$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props')" Label="LocalAppDataPlatform" />
+  </ImportGroup>
+  <ImportGroup Label="PropertySheets" Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
+    <Import Project="$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props" Condition="exists('$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props')" Label="LocalAppDataPlatform" />
+  </ImportGroup>
+  <PropertyGroup Label="UserMacros" />
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
+    <LinkIncremental>true</LinkIncremental>
+    <TargetName>PnxFormation</TargetName>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
+    <LinkIncremental>false</LinkIncremental>
+  </PropertyGroup>
+  <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
+    <ClCompile>
+      <PrecompiledHeader>Use</PrecompiledHeader>
+      <WarningLevel>Level4</WarningLevel>
+      <Optimization>Disabled</Optimization>
+      <PreprocessorDefinitions>WIN32;_WINDOWS;_DEBUG;DYNAMIC_XLDRIVER_DLL;NO_WARN_MBCS_MFC_DEPRECATION;IBPP_WINDOWS=1;IBPP_MSVC=1;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <SDLCheck>false</SDLCheck>
+      <AdditionalIncludeDirectories>$(ProjectDir)\TinyXml\;$(ProjectDir)\core\;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+    </ClCompile>
+    <Link>
+      <SubSystem>Windows</SubSystem>
+      <GenerateDebugInformation>true</GenerateDebugInformation>
+      <AdditionalDependencies>$(ProjectDir)\Lib\PCI_DIO\PCI-Dask.lib;$(ProjectDir)\Lib\USB_DIO\usb-dask.lib;$(ProjectDir)\Lib\AJIN_DIO\AXL.lib;$(ProjectDir)\Lib\MOXA_DIO\MXIO_VC.lib;$(ProjectDir)\Lib\ADVANTECH_PID\ADSDIO.lib;$(ProjectDir)\Lib\ADVANTECH_PID\ADSMOD.lib;$(ProjectDir)\Lib\ADVANTECH_PID\ADS5550DIO.lib;$(ProjectDir)\Lib\VISA\agvisa32.lib;$(ProjectDir)\Lib\VISA\agvisaext.lib;$(ProjectDir)\Lib\VISA\ktvisa32.lib;$(ProjectDir)\Lib\VISA\ktvisaext.lib;$(ProjectDir)\Lib\VISA\nivisa64.lib;$(ProjectDir)\Lib\VISA\visa32.lib;$(ProjectDir)\Lib\VISA\visa64.lib;$(ProjectDir)\Lib\VISA\visaext.lib;rpcrt4.lib</AdditionalDependencies>
+      <HeapReserveSize>
+      </HeapReserveSize>
+      <HeapCommitSize>
+      </HeapCommitSize>
+      <StackReserveSize>
+      </StackReserveSize>
+      <StackCommitSize>
+      </StackCommitSize>
+      <TargetMachine>MachineX86</TargetMachine>
+    </Link>
+    <Midl>
+      <MkTypLibCompatible>false</MkTypLibCompatible>
+      <ValidateAllParameters>true</ValidateAllParameters>
+      <PreprocessorDefinitions>_DEBUG;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+    </Midl>
+    <ResourceCompile>
+      <Culture>0x0409</Culture>
+      <PreprocessorDefinitions>_DEBUG;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <AdditionalIncludeDirectories>$(IntDir);%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+    </ResourceCompile>
+  </ItemDefinitionGroup>
+  <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
+    <ClCompile>
+      <WarningLevel>Level4</WarningLevel>
+      <PrecompiledHeader>Use</PrecompiledHeader>
+      <Optimization>MaxSpeed</Optimization>
+      <FunctionLevelLinking>true</FunctionLevelLinking>
+      <IntrinsicFunctions>true</IntrinsicFunctions>
+      <PreprocessorDefinitions>WIN32;_WINDOWS;_DEBUG;NO_WARN_MBCS_MFC_DEPRECATION;IBPP_WINDOWS=1;IBPP_MSVC=1;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <SDLCheck>false</SDLCheck>
+      <AdditionalIncludeDirectories>$(ProjectDir)\TinyXml\;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <RuntimeLibrary>MultiThreaded</RuntimeLibrary>
+    </ClCompile>
+    <Link>
+      <SubSystem>Windows</SubSystem>
+      <GenerateDebugInformation>true</GenerateDebugInformation>
+      <EnableCOMDATFolding>true</EnableCOMDATFolding>
+      <OptimizeReferences>true</OptimizeReferences>
+      <StackReserveSize>
+      </StackReserveSize>
+      <HeapReserveSize>
+      </HeapReserveSize>
+      <HeapCommitSize>
+      </HeapCommitSize>
+      <StackCommitSize>
+      </StackCommitSize>
+      <AdditionalDependencies>$(ProjectDir)\Lib\PCI_DIO\PCI-Dask.lib;$(ProjectDir)\Lib\USB_DIO\usb-dask.lib;$(ProjectDir)\Lib\AJIN_DIO\AXL.lib;$(ProjectDir)\Lib\AJIN_DIO\AXL.lib;rpcrt4.lib;%(AdditionalDependencies)</AdditionalDependencies>
+    </Link>
+    <Midl>
+      <MkTypLibCompatible>false</MkTypLibCompatible>
+      <ValidateAllParameters>true</ValidateAllParameters>
+      <PreprocessorDefinitions>NDEBUG;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+    </Midl>
+    <ResourceCompile>
+      <Culture>0x0409</Culture>
+      <PreprocessorDefinitions>NDEBUG;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <AdditionalIncludeDirectories>$(IntDir);%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+    </ResourceCompile>
+  </ItemDefinitionGroup>
+  <ItemGroup>
+    <Text Include="ReadMe.txt" />
+  </ItemGroup>
+  <ItemGroup>
+    <ClInclude Include="Alarm.h" />
+    <ClInclude Include="AlarmInverter.h" />
+    <ClInclude Include="AlarmInverterList.h" />
+    <ClInclude Include="AlarmInverterMap.h" />
+    <ClInclude Include="AlarmList.h" />
+    <ClInclude Include="AlarmMap.h" />
+    <ClInclude Include="AXA.h" />
+    <ClInclude Include="AXC.h" />
+    <ClInclude Include="AXD.h" />
+    <ClInclude Include="AXDev.h" />
+    <ClInclude Include="AXHD.h" />
+    <ClInclude Include="AXHS.h" />
+    <ClInclude Include="AXL.h" />
+    <ClInclude Include="AXM.h" />
+    <ClInclude Include="CAdvantechModbus.h" />
+    <ClInclude Include="CAjinIoControl.h" />
+    <ClInclude Include="CCalibratorChannelData.h" />
+    <ClInclude Include="CCalibratorVisaProcess.h" />
+    <ClInclude Include="CCommPid.h" />
+    <ClInclude Include="CDioProcessStage2Sequence.h" />
+    <ClInclude Include="CDlgCalibration.h" />
+    <ClInclude Include="CDlgCompleteOption.h" />
+    <ClInclude Include="CDlgEditChannelView.h" />
+    <ClInclude Include="CDlgEditCycler.h" />
+    <ClInclude Include="CDlgEditMultiSchedule.h" />
+    <ClInclude Include="CDlgEditScheduleInfo.h" />
+    <ClInclude Include="CDlgEditUser.h" />
+    <ClInclude Include="CDlgMainTitleFormation.h" />
+    <ClInclude Include="CDlgNextComplete.h" />
+    <ClInclude Include="CDlgNextPause.h" />
+    <ClInclude Include="CDlgNextStep.h" />
+    <ClInclude Include="CDlgPauseOption.h" />
+    <ClInclude Include="CDlgPogoPin.h" />
+    <ClInclude Include="CDlgReserveCancel.h" />
+    <ClInclude Include="CDlgViewChamber.h" />
+    <ClInclude Include="CDlgViewEqpChannelStatus.h" />
+    <ClInclude Include="CDlgViewEqpGroupStatus.h" />
+    <ClInclude Include="CDlgViewEqpLog.h" />
+    <ClInclude Include="CDlgViewEqpSystemStatus.h" />
+    <ClInclude Include="CDlgViewIoManual.h" />
+    <ClInclude Include="CDlgViewIoMap.h" />
+    <ClInclude Include="CDlgViewLogIn.h" />
+    <ClInclude Include="CDlgViewMaterial.h" />
+    <ClInclude Include="CDlgViewPlc1.h" />
+    <ClInclude Include="CDlgViewPlc2.h" />
+    <ClInclude Include="CDlgViewPlcManual.h" />
+    <ClInclude Include="CDlgViewProgramStatus.h" />
+    <ClInclude Include="CDlgViewScheduleInfo.h" />
+    <ClInclude Include="CDlgViewSchedulelist.h" />
+    <ClInclude Include="Channel.h" />
+    <ClInclude Include="CInverterAlarm.h" />
+    <ClInclude Include="CircularQueue.h" />
+    <ClInclude Include="ClientSocket.h" />
+    <ClInclude Include="CMgrAccount.h" />
+    <ClInclude Include="CMgrChamber.h" />
+    <ClInclude Include="CMgrMaterial.h" />
+    <ClInclude Include="CMgrModel.h" />
+    <ClInclude Include="CMgrPid.h" />
+    <ClInclude Include="CMgrScheduleHistory.h" />
+    <ClInclude Include="ColorStaticST.h" />
+    <ClInclude Include="ComiEcatSdk_Api.h" />
+    <ClInclude Include="ComiEcatSdk_Def.h" />
+    <ClInclude Include="ComiEcatSdk_Err.h" />
+    <ClInclude Include="ComiEcatSdk_SysDef.h" />
+    <ClInclude Include="ComiSWEcatSdk_Api.h" />
+    <ClInclude Include="CommData.h" />
+    <ClInclude Include="CommEthernet.h" />
+    <ClInclude Include="ComProc.h" />
+    <ClInclude Include="CDioProcessStage1Sequence.h" />
+    <ClInclude Include="CPidModbus.h" />
+    <ClInclude Include="CPlcProcessSequence1.h" />
+    <ClInclude Include="CPlcProcessSequence2.h" />
+    <ClInclude Include="CreateGrayscaleIcon.h" />
+    <ClInclude Include="CStandardModbus.h" />
+    <ClInclude Include="CWorkLogger.h" />
+    <ClInclude Include="CxStatic.h" />
+    <ClInclude Include="Cycle.h" />
+    <ClInclude Include="DAQ.h" />
+    <ClInclude Include="DAQList.h" />
+    <ClInclude Include="defineIO.h" />
+    <ClInclude Include="DefTreeCtrl.h" />
+    <ClInclude Include="DlgAuth.h" />
+    <ClInclude Include="DlgMainTitle.h" />
+    <ClInclude Include="DlgSystemSafety.h" />
+    <ClInclude Include="DlgTotalSafetyCondition.h" />
+    <ClInclude Include="DlgViewAlarm.h" />
+    <ClInclude Include="DlgViewChamberAlarm.h" />
+    <ClInclude Include="DlgViewChannelPack.h" />
+    <ClInclude Include="DlgViewDAQ.h" />
+    <ClInclude Include="DlgViewPattern.h" />
+    <ClInclude Include="EthernetDefine.h" />
+    <ClInclude Include="GridCtrl_src\CellRange.h" />
+    <ClInclude Include="GridCtrl_src\CGridMemDC.h" />
+    <ClInclude Include="GridCtrl_src\GridCell.h" />
+    <ClInclude Include="GridCtrl_src\GridCellBase.h" />
+    <ClInclude Include="GridCtrl_src\GridCtrl.h" />
+    <ClInclude Include="GridCtrl_src\GridDropTarget.h" />
+    <ClInclude Include="GridCtrl_src\InPlaceEdit.h" />
+    <ClInclude Include="GridCtrl_src\TitleTip.h" />
+    <ClInclude Include="GroupListCtrl.h" />
+    <ClInclude Include="GroupListCtrlView.h" />
+    <ClInclude Include="GroupListDefine.h" />
+    <ClInclude Include="include\ADSDIO.h" />
+    <ClInclude Include="include\ADSMOD.h" />
+    <ClInclude Include="include\modbus.h" />
+    <ClInclude Include="include\PCAN\PCANBasic.h" />
+    <ClInclude Include="include\PCAN\ProtocolCan.h" />
+    <ClInclude Include="include\PLC\ActDefine.h" />
+    <ClInclude Include="include\PLC\actutltype.h" />
+    <ClInclude Include="include\visa.h" />
+    <ClInclude Include="include\visaext.h" />
+    <ClInclude Include="include\visatype.h" />
+    <ClInclude Include="include\vpptype.h" />
+    <ClInclude Include="LogThread.h" />
+    <ClInclude Include="MemDC.h" />
+    <ClInclude Include="MgrAlarm.h" />
+    <ClInclude Include="MgrChannel.h" />
+    <ClInclude Include="MgrComm.h" />
+    <ClInclude Include="MgrCommData.h" />
+    <ClInclude Include="MgrConfig.h" />
+    <ClInclude Include="MgrDAQ.h" />
+    <ClInclude Include="MgrDio.h" />
+    <ClInclude Include="MgrEthernet.h" />
+    <ClInclude Include="MgrLog.h" />
+    <ClInclude Include="MgrOption.h" />
+    <ClInclude Include="MgrPCan.h" />
+    <ClInclude Include="MgrPlcInterface.h" />
+    <ClInclude Include="MgrSchedule.h" />
+    <ClInclude Include="MgrSerial.h" />
+    <ClInclude Include="MgrStatus.h" />
+    <ClInclude Include="MgrSystemLog.h" />
+    <ClInclude Include="NewCellTypes\GridCellCheck.h" />
+    <ClInclude Include="NewCellTypes\GridCellCombo.h" />
+    <ClInclude Include="NewCellTypes\GridCellDateTime.h" />
+    <ClInclude Include="NewCellTypes\GridCellNumeric.h" />
+    <ClInclude Include="NewCellTypes\GridURLCell.h" />
+    <ClInclude Include="OddButton.h" />
+    <ClInclude Include="Pattern.h" />
+    <ClInclude Include="PCANBasicClass.h" />
+    <ClInclude Include="PCanCom.h" />
+    <ClInclude Include="PCANUser.h" />
+    <ClInclude Include="PlcInterface.h" />
+    <ClInclude Include="PnxCycler.h" />
+    <ClInclude Include="PnxCyclerDlg.h" />
+    <ClInclude Include="PnxFormationDlg.h" />
+    <ClInclude Include="PnxProcdump.h" />
+    <ClInclude Include="PnxUtil.h" />
+    <ClInclude Include="QueuingSerial.h" />
+    <ClInclude Include="Resource.h" />
+    <ClInclude Include="safequeue.h" />
+    <ClInclude Include="SerialCom.h" />
+    <ClInclude Include="Singleton.h" />
+    <ClInclude Include="SkinButton.h" />
+    <ClInclude Include="SkinMemDC.h" />
+    <ClInclude Include="SkinTreeCtrl.h" />
+    <ClInclude Include="SockProc.h" />
+    <ClInclude Include="stdafx.h" />
+    <ClInclude Include="Step.h" />
+    <ClInclude Include="SysAlarm.h" />
+    <ClInclude Include="TabCtrlEx.h" />
+    <ClInclude Include="targetver.h" />
+    <ClInclude Include="TcpManager.h" />
+    <ClInclude Include="TcpSock.h" />
+    <ClInclude Include="TinyXml\tinystr.h" />
+    <ClInclude Include="TinyXml\tinyxml.h" />
+    <ClInclude Include="TinyXml\TiXmlHelper.h" />
+    <ClInclude Include="turby_define.h" />
+    <ClInclude Include="util.h" />
+    <ClInclude Include="version.h" />
+    <ClInclude Include="xShadeButton\xShadeButton.h" />
+    <ClInclude Include="ZebraBCRControl.h" />
+  </ItemGroup>
+  <ItemGroup>
+    <ClCompile Include="Alarm.cpp" />
+    <ClCompile Include="AlarmInverter.cpp" />
+    <ClCompile Include="AlarmInverterList.cpp" />
+    <ClCompile Include="AlarmInverterMap.cpp" />
+    <ClCompile Include="AlarmList.cpp" />
+    <ClCompile Include="AlarmMap.cpp" />
+    <ClCompile Include="CAdvantechModbus.cpp" />
+    <ClCompile Include="CAjinIoControl.cpp" />
+    <ClCompile Include="CCalibratorChannelData.cpp" />
+    <ClCompile Include="CCalibratorVisaProcess.cpp" />
+    <ClCompile Include="CCommPid.cpp" />
+    <ClCompile Include="CDioProcessStage2Sequence.cpp" />
+    <ClCompile Include="CDlgCalibration.cpp" />
+    <ClCompile Include="CDlgCompleteOption.cpp" />
+    <ClCompile Include="CDlgEditChannelView.cpp" />
+    <ClCompile Include="CDlgEditCycler.cpp" />
+    <ClCompile Include="CDlgEditMultiSchedule.cpp" />
+    <ClCompile Include="CDlgEditScheduleInfo.cpp" />
+    <ClCompile Include="CDlgEditUser.cpp" />
+    <ClCompile Include="CDlgMainTitleFormation.cpp" />
+    <ClCompile Include="CDlgNextComplete.cpp" />
+    <ClCompile Include="CDlgNextPause.cpp" />
+    <ClCompile Include="CDlgNextStep.cpp" />
+    <ClCompile Include="CDlgPauseOption.cpp" />
+    <ClCompile Include="CDlgPogoPin.cpp" />
+    <ClCompile Include="CDlgReserveCancel.cpp" />
+    <ClCompile Include="CDlgViewChamber.cpp" />
+    <ClCompile Include="CDlgViewEqpChannelStatus.cpp" />
+    <ClCompile Include="CDlgViewEqpGroupStatus.cpp" />
+    <ClCompile Include="CDlgViewEqpLog.cpp" />
+    <ClCompile Include="CDlgViewEqpSystemStatus.cpp" />
+    <ClCompile Include="CDlgViewIoManual.cpp" />
+    <ClCompile Include="CDlgViewIoMap.cpp" />
+    <ClCompile Include="CDlgViewLogIn.cpp" />
+    <ClCompile Include="CDlgViewMaterial.cpp" />
+    <ClCompile Include="CDlgViewPlc1.cpp" />
+    <ClCompile Include="CDlgViewPlc2.cpp" />
+    <ClCompile Include="CDlgViewPlcManual.cpp" />
+    <ClCompile Include="CDlgViewProgramStatus.cpp" />
+    <ClCompile Include="CDlgViewScheduleInfo.cpp" />
+    <ClCompile Include="CDlgViewSchedulelist.cpp" />
+    <ClCompile Include="Channel.cpp" />
+    <ClCompile Include="CInverterAlarm.cpp" />
+    <ClCompile Include="CircularQueue.cpp" />
+    <ClCompile Include="ClientSocket.cpp" />
+    <ClCompile Include="CMgrAccount.cpp" />
+    <ClCompile Include="CMgrChamber.cpp" />
+    <ClCompile Include="CMgrMaterial.cpp" />
+    <ClCompile Include="CMgrModel.cpp" />
+    <ClCompile Include="CMgrPid.cpp" />
+    <ClCompile Include="CMgrScheduleHistory.cpp" />
+    <ClCompile Include="ColorStaticST.cpp" />
+    <ClCompile Include="ComiEcatSdk_Loader.cpp" />
+    <ClCompile Include="ComiSWEcatSdk_Loader.cpp" />
+    <ClCompile Include="CommData.cpp" />
+    <ClCompile Include="CommEthernet.cpp" />
+    <ClCompile Include="ComProc.cpp" />
+    <ClCompile Include="CDioProcessStage1Sequence.cpp" />
+    <ClCompile Include="CPidModbus.cpp" />
+    <ClCompile Include="CPlcProcessSequence1.cpp" />
+    <ClCompile Include="CPlcProcessSequence2.cpp" />
+    <ClCompile Include="CStandardModbus.cpp" />
+    <ClCompile Include="CWorkLogger.cpp" />
+    <ClCompile Include="CxStatic.cpp" />
+    <ClCompile Include="Cycle.cpp" />
+    <ClCompile Include="DAQ.cpp" />
+    <ClCompile Include="DAQList.cpp" />
+    <ClCompile Include="DlgAuth.cpp" />
+    <ClCompile Include="DlgMainTitle.cpp" />
+    <ClCompile Include="DlgSystemSafety.cpp" />
+    <ClCompile Include="DlgTotalSafetyCondition.cpp" />
+    <ClCompile Include="DlgViewAlarm.cpp" />
+    <ClCompile Include="DlgViewChamberAlarm.cpp" />
+    <ClCompile Include="DlgViewChannelPack.cpp" />
+    <ClCompile Include="DlgViewDAQ.cpp" />
+    <ClCompile Include="DlgViewPattern.cpp" />
+    <ClCompile Include="GridCtrl_src\GridCell.cpp" />
+    <ClCompile Include="GridCtrl_src\GridCellBase.cpp" />
+    <ClCompile Include="GridCtrl_src\GridCtrl.cpp" />
+    <ClCompile Include="GridCtrl_src\GridDropTarget.cpp" />
+    <ClCompile Include="GridCtrl_src\InPlaceEdit.cpp" />
+    <ClCompile Include="GridCtrl_src\TitleTip.cpp" />
+    <ClCompile Include="GroupListCtrl.cpp" />
+    <ClCompile Include="GroupListCtrlView.cpp" />
+    <ClCompile Include="include\PLC\actutltype.cpp" />
+    <ClCompile Include="LogThread.cpp" />
+    <ClCompile Include="MgrAlarm.cpp" />
+    <ClCompile Include="MgrChannel.cpp" />
+    <ClCompile Include="MgrComm.cpp" />
+    <ClCompile Include="MgrCommData.cpp" />
+    <ClCompile Include="MgrConfig.cpp" />
+    <ClCompile Include="MgrDAQ.cpp" />
+    <ClCompile Include="MgrDio.cpp" />
+    <ClCompile Include="MgrEthernet.cpp" />
+    <ClCompile Include="MgrLog.cpp" />
+    <ClCompile Include="MgrOption.cpp" />
+    <ClCompile Include="MgrPCan.cpp" />
+    <ClCompile Include="MgrPlcInterface.cpp" />
+    <ClCompile Include="MgrSchedule.cpp" />
+    <ClCompile Include="MgrSerial.cpp" />
+    <ClCompile Include="MgrStatus.cpp" />
+    <ClCompile Include="MgrSystemLog.cpp" />
+    <ClCompile Include="NewCellTypes\GridCellCheck.cpp" />
+    <ClCompile Include="NewCellTypes\GridCellCombo.cpp" />
+    <ClCompile Include="NewCellTypes\GridCellDateTime.cpp" />
+    <ClCompile Include="NewCellTypes\GridCellNumeric.cpp" />
+    <ClCompile Include="NewCellTypes\GridURLCell.cpp" />
+    <ClCompile Include="OddButton.cpp" />
+    <ClCompile Include="Pattern.cpp" />
+    <ClCompile Include="PCANBasicClass.cpp" />
+    <ClCompile Include="PCanCom.cpp" />
+    <ClCompile Include="PCANUser.cpp" />
+    <ClCompile Include="PlcInterface.cpp" />
+    <ClCompile Include="PnxCycler.cpp" />
+    <ClCompile Include="PnxCyclerDlg.cpp" />
+    <ClCompile Include="PnxFormationDlg.cpp" />
+    <ClCompile Include="PnxUtil.cpp" />
+    <ClCompile Include="QueuingSerial.cpp" />
+    <ClCompile Include="SerialCom.cpp" />
+    <ClCompile Include="SkinButton.cpp" />
+    <ClCompile Include="SkinTreeCtrl.cpp" />
+    <ClCompile Include="SockProc.cpp" />
+    <ClCompile Include="stdafx.cpp">
+      <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">Create</PrecompiledHeader>
+      <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">Create</PrecompiledHeader>
+    </ClCompile>
+    <ClCompile Include="Step.cpp" />
+    <ClCompile Include="SysAlarm.cpp" />
+    <ClCompile Include="TabCtrlEx.cpp" />
+    <ClCompile Include="TcpManager.cpp" />
+    <ClCompile Include="TcpSock.cpp" />
+    <ClCompile Include="TinyXml\tinystr.cpp" />
+    <ClCompile Include="TinyXml\tinyxml.cpp" />
+    <ClCompile Include="TinyXml\tinyxmlerror.cpp" />
+    <ClCompile Include="TinyXml\tinyxmlparser.cpp" />
+    <ClCompile Include="TinyXml\TiXmlHelper.cpp" />
+    <ClCompile Include="version.cpp" />
+    <ClCompile Include="xShadeButton\xShadeButton.cpp" />
+    <ClCompile Include="ZebraBCRControl.cpp" />
+  </ItemGroup>
+  <ItemGroup>
+    <ResourceCompile Include="PnxCycler.rc" />
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="res\PnxCycler.rc2" />
+    <None Include="res\Safety.bmp" />
+  </ItemGroup>
+  <ItemGroup>
+    <Image Include="..\..\..\0.bmp" />
+    <Image Include="..\..\..\1.bmp" />
+    <Image Include="res\Alarm.bmp" />
+    <Image Include="res\AlarmReset.bmp" />
+    <Image Include="res\AutoCal.bmp" />
+    <Image Include="res\Balance.bmp" />
+    <Image Include="res\bitmap1.bmp" />
+    <Image Include="res\BMS.bmp" />
+    <Image Include="res\Cancel.bmp" />
+    <Image Include="res\Complete.bmp" />
+    <Image Include="res\CompleteOp1.bmp" />
+    <Image Include="res\CompleteOp2.bmp" />
+    <Image Include="res\CompleteOp3.bmp" />
+    <Image Include="res\CompleteOp4.bmp" />
+    <Image Include="res\Copy.bmp" />
+    <Image Include="res\Cut.bmp" />
+    <Image Include="res\DAQ.bmp" />
+    <Image Include="res\Detail.bmp" />
+    <Image Include="res\Exit.bmp" />
+    <Image Include="res\Green.bmp" />
+    <Image Include="res\Log.bmp" />
+    <Image Include="res\Material.bmp" />
+    <Image Include="res\New.bmp" />
+    <Image Include="res\Next.bmp" />
+    <Image Include="res\NextOp1.bmp" />
+    <Image Include="res\NextOp2.bmp" />
+    <Image Include="res\Open.bmp" />
+    <Image Include="res\Paste.bmp" />
+    <Image Include="res\Pattern.bmp" />
+    <Image Include="res\Pause.bmp" />
+    <Image Include="res\PauseOp1.bmp" />
+    <Image Include="res\PauseOp2.bmp" />
+    <Image Include="res\PauseOp3.bmp" />
+    <Image Include="res\PauseOp4.bmp" />
+    <Image Include="res\PnxCycler.ico" />
+    <Image Include="res\Recent.bmp" />
+    <Image Include="res\Red.bmp" />
+    <Image Include="res\Reserve.bmp" />
+    <Image Include="res\Restart.bmp" />
+    <Image Include="res\Save.bmp" />
+    <Image Include="res\Save.png" />
+    <Image Include="res\SaveAs.bmp" />
+    <Image Include="res\save_as.bmp" />
+    <Image Include="res\schedule.bmp" />
+    <Image Include="res\Simple.bmp" />
+    <Image Include="res\Start.bmp" />
+    <Image Include="res\System.bmp" />
+    <Image Include="res\test.ico" />
+    <Image Include="res\Ups.bmp" />
+    <Image Include="res\Yellow.bmp" />
+  </ItemGroup>
+  <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
+  <ImportGroup Label="ExtensionTargets">
+  </ImportGroup>
+  <ProjectExtensions>
+    <VisualStudio>
+      <UserProperties RESOURCE_FILE="PnxCycler.rc" />
+    </VisualStudio>
+  </ProjectExtensions>
+</Project>

@@ -1,0 +1,109 @@
+#pragma once
+
+#include "Singleton.h"
+#include "AlarmMap.h"
+#include "SysAlarm.h"
+#include <vector>
+#include "CInverterAlarm.h"
+#include <map>
+
+//220529 YGY 채널 별 알람이 아닌 장비 단위 스테이지 단위 알람인 경우 추가
+typedef struct tagALARM_ITEM
+{
+	tagALARM_ITEM() : code(0), text(""), level(0) {}
+
+	void operator = (const tagALARM_ITEM & rhs)
+	{
+		code = rhs.code;
+		text.Format(rhs.text);
+		level = rhs.level;
+		time = rhs.time;
+	}
+	int code;
+	CString text;
+	int level;
+	CTime time;
+
+}ALARM_ITEM;
+
+typedef std::vector<ALARM_ITEM> tagVEALARM;
+
+#define  ALARM_LIGHT				1
+#define  ALARM_HEAVY				2
+enum enumEqAlarm {
+	//PLC
+	ALARM_PLC_HEARTBIT_RECEIVE_ERROR = 0,
+	ALARM_CHAMBER_DOOR_OPEN_ERROR = 1,
+	ALARM_CHAMBER_ALARM_ERROR = 2,
+};
+
+class CMgrAlarm : public CSingleton< CMgrAlarm >
+{
+public:
+	CMgrAlarm();
+	virtual ~CMgrAlarm();
+
+	void	StartThread();
+	void	StopThread();
+
+	void	GetChannelAlarm(int nChannel, int nIndex, CStringArray& arr); //Formation 현재 사용
+	void	GetChannelInverterAlarm(int nIndex, CStringArray& arr); //Formation 현재 사용
+
+	void	GetChannelAlarm(int nChannel, int nIndex, __int16* pBuff);
+	BOOL	ExistChannelAlarm(int nChannel);
+
+	void	AddAlarm(int nChannelNumber, int nType, BYTE byAlarm);
+	CString	AddAlarm(int nChannelNumber, int nType, BYTE byAlarm1, BYTE byAlarm2);
+	void	ClearAlarm(int nChannelNumber, int nType);
+	//CString	AddAlarmCan(int nChannelNumber, int nWr, int nGrd, int nDc, int nFault);				//1013 hsm
+	CString	AddInverterAlarmCan(int nAlarmType, BYTE byteAlarm2, BYTE byteAlarm1);			// PCAN
+	CString	AddAlarmCan(int nChannelNumber, int nIGBT, int nWr, int nGrd, int nDc, int nFault);			// PCAN
+	void	ClearInverterAlarm();
+
+	CAlarmMap*	GetAlarmMap(int nChannelNo);
+	//lyw4_1 
+	void	AddSysAlarm(int nChannelNumber, CString strTitle, CString strContents);	//알람추가
+	void	ClearSysAlarm(int nChannelNumber); //알람 초기화
+
+		//220529 YGY 채널 별 알람이 아닌 장비 단위 스테이지 단위 알람인 경우 추가
+	BOOL	AddEqAlarm(int nCode, CString text, int level, ALARM_ITEM* item);	//알람추가
+	tagVEALARM	GetEqAlarm();
+	void	ClearEqAlarm();
+
+	CList<CSysAlarm>* GetSysAlarmList(int nChannelNumber); //채널의 알람 가져오기
+	CList<CInverterAlarm>* GetInverterAlarmList();
+	
+	//lyw4_1 ---------------------------------------
+
+private:
+	CWinThread*	m_pThread;
+
+	BOOL	m_bLoop;
+
+	// KEY = Channel, DATA = Alarm Text
+	std::map< int, CAlarmMap* > m_mapAlarm;
+	//lyw4_1 : KEY = Channel, 시스템 알람 저장 map
+	std::map< int, CList<CSysAlarm>* > m_mapSysAlarm;
+	std::map< int, CList<CInverterAlarm>* > m_mapInverterAlarm;
+
+	//220529 YGY 채널 별 알람이 아닌 장비 단위 스테이지 단위 알람인 경우 추가
+	tagVEALARM m_veEqAlarm;
+	tagVEALARM m_veInverterAlarm;
+
+
+	//lyw4_1 ---------------------------------------------
+
+private:
+	// Alarm List
+	void	LoadAlarmList();
+	void	InitSysAlarmList(); //lyw4_1 : 알람초기화
+	void	InitInverterAlarm();	//220222 YGYUN Inverter Alarm 추가( Formation 설비)
+	void	InitInverterAlarm_();
+	void	WriteAlarmHistory(int nChannelNumber, CAlarm* pAlarm);
+
+	void	Add(int nChannelNumber, CAlarmMap* pNewElement);
+	void	RemoveAll();
+
+	static UINT OnDB2AlarmThread(LPVOID pParam);
+};
+

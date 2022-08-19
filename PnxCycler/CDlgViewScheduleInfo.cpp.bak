@@ -1,0 +1,492 @@
+﻿// CDlgViewScheduleInfo.cpp: 구현 파일
+//
+
+#include "stdafx.h"
+#include "PnxCycler.h"
+#include "CDlgViewScheduleInfo.h"
+#include "afxdialogex.h"
+#include "MgrChannel.h"
+#include "MgrConfig.h"
+
+#ifdef _DEBUG
+#define new DEBUG_NEW
+#undef THIS_FILE
+static char THIS_FILE[] = __FILE__;
+#endif
+
+
+// CDlgViewScheduleInfo 대화 상자
+
+IMPLEMENT_DYNAMIC(CDlgViewScheduleInfo, CDialogEx)
+
+CDlgViewScheduleInfo::CDlgViewScheduleInfo(CWnd* pParent /*=nullptr*/)
+	: CDialogEx(IDD_DLG_VIEW_SCHEDULE_INFO, pParent)
+{
+	m_lpCyclerChannel	= nullptr;
+	m_lpScheduleInfo	= nullptr;
+	m_lpModel			= nullptr;
+	m_lpSchedule		= nullptr;
+}
+
+CDlgViewScheduleInfo::~CDlgViewScheduleInfo()
+{
+	if (m_lpScheduleInfo)
+	{
+		m_lpScheduleInfo->ClearSchedule();
+
+		delete m_lpScheduleInfo;
+		m_lpScheduleInfo = nullptr;
+	}
+}
+
+void CDlgViewScheduleInfo::DoDataExchange(CDataExchange* pDX)
+{
+	CDialogEx::DoDataExchange(pDX);
+	DDX_Control(pDX, IDC_LIST_VIEW_SCHEDULE_INFO, m_listSchedule);
+	DDX_Control(pDX, IDC_LIST_VIEW_SCHEDULE_INFO_GRADE, m_listGrade);
+}
+
+
+BEGIN_MESSAGE_MAP(CDlgViewScheduleInfo, CDialogEx)
+	ON_WM_SHOWWINDOW()
+	ON_WM_DESTROY()
+	ON_BN_CLICKED(IDC_BTN_VIEW_SCHEDULE_INFO_CLOSE, &CDlgViewScheduleInfo::OnBnClickedBtnViewScheduleInfoClose)
+	ON_NOTIFY(NM_CLICK, IDC_LIST_VIEW_SCHEDULE_INFO, &CDlgViewScheduleInfo::OnClickListViewScheduleInfo)
+	ON_NOTIFY(NM_CLICK, IDC_LIST_VIEW_SCHEDULE_INFO_GRADE, &CDlgViewScheduleInfo::OnClickListViewScheduleInfoGrade)
+END_MESSAGE_MAP()
+
+
+// CDlgViewScheduleInfo 메시지 처리기
+
+
+BOOL CDlgViewScheduleInfo::Create(CWnd* pParentWnd)
+{
+	return CDialogEx::Create(IDD, pParentWnd);
+}
+
+
+BOOL CDlgViewScheduleInfo::PreTranslateMessage(MSG* pMsg)
+{
+	if (WM_KEYDOWN == pMsg->message)
+	{
+		if (VK_RETURN == pMsg->wParam)
+			return TRUE;
+
+		if (VK_ESCAPE == pMsg->wParam)
+		{
+			ShowWindow(SW_HIDE);
+
+			return TRUE;
+		}
+	}
+
+	return CDialogEx::PreTranslateMessage(pMsg);
+}
+
+
+BOOL CDlgViewScheduleInfo::OnInitDialog()
+{
+	CDialogEx::OnInitDialog();
+
+	InitListCtrl();
+
+	CenterWindow();
+
+	return TRUE;  // return TRUE unless you set the focus to a control
+				  // 예외: OCX 속성 페이지는 FALSE를 반환해야 합니다.
+}
+
+
+void CDlgViewScheduleInfo::OnShowWindow(BOOL bShow, UINT nStatus)
+{
+	CDialogEx::OnShowWindow(bShow, nStatus);
+
+	if (TRUE == bShow)
+	{
+		CMgrChannel* pMgr = CMgrChannel::GetMgr();
+
+		if (!pMgr)
+			return;
+
+		m_lpCyclerChannel = pMgr->GetSelectedChannel();
+
+		if (nullptr == m_lpCyclerChannel)
+			return;
+
+		// 기존에 있던 포인터를 가지고 오게 되면.. 혹여나 진행중에 선택하면 Clear 되자냐
+		if (m_lpScheduleInfo)
+		{
+			m_lpScheduleInfo->ClearSchedule();
+
+			delete m_lpScheduleInfo;
+			m_lpScheduleInfo = nullptr;
+		}
+
+		m_lpScheduleInfo = new CMgrSchedule();
+
+		if (m_lpScheduleInfo && m_lpSchedule)
+		{
+			m_lpScheduleInfo->LoadScheduleXml(m_lpSchedule->strScheduleFilePath);
+
+			LoadModel(true);
+
+			LoadSchedule();
+		}
+	}
+}
+
+
+void CDlgViewScheduleInfo::OnDestroy()
+{
+	CDialogEx::OnDestroy();
+
+	// TODO: 여기에 메시지 처리기 코드를 추가합니다.
+}
+
+
+void CDlgViewScheduleInfo::OnBnClickedBtnViewScheduleInfoClose()
+{
+	ShowWindow(SW_HIDE);
+}
+
+
+void CDlgViewScheduleInfo::OnClickListViewScheduleInfo(NMHDR *pNMHDR, LRESULT *pResult)
+{
+	LPNMITEMACTIVATE pNMItemActivate = reinterpret_cast<LPNMITEMACTIVATE>(pNMHDR);
+
+	int nCurSel = pNMItemActivate->iItem;
+
+	LoadStepInfo(nCurSel);
+
+	*pResult = 0;
+}
+
+
+void CDlgViewScheduleInfo::OnClickListViewScheduleInfoGrade(NMHDR *pNMHDR, LRESULT *pResult)
+{
+//	LPNMITEMACTIVATE pNMItemActivate = reinterpret_cast<LPNMITEMACTIVATE>(pNMHDR);
+	// TODO: 여기에 컨트롤 알림 처리기 코드를 추가합니다.
+	*pResult = 0;
+}
+
+void	CDlgViewScheduleInfo::InitListCtrl()
+{
+	LPCTSTR lpszText[eViewScheduleInfoObjectMaxCount] = { "순번", "타입", "충전전압(V)", "방전전압(V)", "충전전류(A)", "방전전류(A)", "파워(W)", "저항(mΩ)", "온도(°C)" };
+
+	m_listSchedule.InsertColumn(0, "", LVCFMT_CENTER, 0);
+
+	for (int i = 0; i < eViewScheduleInfoObjectMaxCount; ++i)
+		m_listSchedule.InsertColumn(i + 1, lpszText[i], LVCFMT_CENTER, GetListCtrlColumnWidth(i));
+
+	m_listSchedule.SetExtendedStyle(LVS_EX_GRIDLINES | LVS_EX_FULLROWSELECT);
+
+	m_listGrade.InsertColumn(0, "", LVCFMT_CENTER, 0);
+	m_listGrade.InsertColumn(1, "순번", LVCFMT_CENTER, 60);
+	m_listGrade.InsertColumn(2, "하한값", LVCFMT_CENTER, 60);
+	m_listGrade.InsertColumn(3, "상한값", LVCFMT_CENTER, 60);
+	m_listGrade.InsertColumn(4, "코드", LVCFMT_CENTER, 60);
+	m_listGrade.InsertColumn(5, "진행", LVCFMT_CENTER, 60);
+}
+
+void	CDlgViewScheduleInfo::ShowViewScheduleInfo(SModel* lpModel, SSchedule* lpSchedule)
+{
+	m_lpModel		= lpModel;
+	m_lpSchedule	= lpSchedule;
+
+	ShowWindow(SW_SHOW);
+}
+
+void	CDlgViewScheduleInfo::LoadModel(bool bInitialize)
+{
+	if (true == bInitialize)
+	{
+		for (int i = 0; i < eViewScheduleInfoModelMaxCount; ++i)
+		{
+			CStatic* lpControl = (CStatic*)GetDlgItem(IDC_STATIC_VIEW_SCHEDULE_INFO_MODEL_VALUE_1 + i);
+
+			if (!lpControl)
+				continue;
+
+			lpControl->SetWindowText("");
+		}
+
+		for (int i = 0; i < eViewScheduleInfoScheduleMaxCount; ++i)
+		{
+			CStatic* lpControl = (CStatic*)GetDlgItem(IDC_STATIC_VIEW_SCHEDULE_INFO_SCHEDULE_VALUE_1 + i);
+
+			if (!lpControl)
+				continue;
+
+			lpControl->SetWindowText("");
+		}
+
+		for (int i = 0; i < eViewScheduleInfoSafetyMaxCount; ++i)
+		{
+			CStatic* lpControl = (CStatic*)GetDlgItem(IDC_STATIC_VIEW_SCHEDULE_INFO_SAFETY_VALUE_1 + i);
+
+			if (!lpControl)
+				continue;
+
+			lpControl->SetWindowText("");
+		}
+
+		for (int i = 0; i < eViewScheduleCompleteMaxCount; ++i)
+		{
+			CStatic* lpControl = (CStatic*)GetDlgItem(IDC_STATIC_VIEW_SCHEDULE_INFO_COMPLETE_VALUE_1 + i);
+
+			if (!lpControl)
+				continue;
+
+			lpControl->SetWindowText("");
+		}
+
+		for (int i = 0; i < eViewScheduleSystemSafetyMaxCount; ++i)
+		{
+			CStatic* lpControl = (CStatic*)GetDlgItem(IDC_STATIC_VIEW_SCHEDULE_INFO_SYSTEM_SAFETY_MIN_1 + i);
+
+			if (!lpControl)
+				continue;
+
+			lpControl->SetWindowText("");
+		}
+
+		for (int i = 0; i < eViewScheduleSystemSafetyMaxCount; ++i)
+		{
+			CStatic* lpControl = (CStatic*)GetDlgItem(IDC_STATIC_VIEW_SCHEDULE_INFO_SYSTEM_SAFETY_MAX_1 + i);
+
+			if (!lpControl)
+				continue;
+
+			lpControl->SetWindowText("");
+		}
+
+		for (int i = 0; i < eViewScheduleLogTypeMaxCount; ++i)
+		{
+			CStatic* lpControl = (CStatic*)GetDlgItem(IDC_STATIC_VIEW_SCHEDULE_INFO_SAVE_VALUE_1 + i);
+
+			if (!lpControl)
+				continue;
+
+			lpControl->SetWindowText("");
+		}
+	}
+	else
+	{
+		for (int i = 0; i < eViewScheduleInfoModelMaxCount; ++i)
+		{
+			CStatic* lpControl = (CStatic*)GetDlgItem(IDC_STATIC_VIEW_SCHEDULE_INFO_MODEL_VALUE_1 + i);
+
+			if (!lpControl)
+				continue;
+
+			if(!m_lpModel)
+				continue;
+
+			switch (i)
+			{
+			case eViewScheduleInfoModelName: lpControl->SetWindowText(m_lpModel->strModelName);			break;
+			case eViewScheduleInfoModelDesc: lpControl->SetWindowText(m_lpModel->strModelDescription);	break;
+			}
+		}
+
+		for (int i = 0; i < eViewScheduleInfoScheduleMaxCount; ++i)
+		{
+			CStatic* lpControl = (CStatic*)GetDlgItem(IDC_STATIC_VIEW_SCHEDULE_INFO_SCHEDULE_VALUE_1 + i);
+
+			if (!lpControl)
+				continue;
+
+			if(!m_lpModel || !m_lpSchedule)
+				continue;
+
+			switch (i)
+			{
+			case eViewScheduleInfoScheduleName: lpControl->SetWindowText(m_lpSchedule->strScheduleName);		break;
+			case eViewScheduleInfoScheduleUser: lpControl->SetWindowText(m_lpModel->strWritter);				break;
+			case eViewScheduleInfoScheduleDesc: lpControl->SetWindowText(m_lpSchedule->strScheduleDescription);	break;
+			case eViewScheduleInfoScheduleTime: lpControl->SetWindowText(m_lpSchedule->strModifyTime);			break;
+			}
+		}
+
+		vector<CString> vecSafety;
+		if(m_lpScheduleInfo)
+			m_lpScheduleInfo->GetScheduleSafetyInfo(vecSafety);
+
+		for (int i = 0; i < eViewScheduleInfoSafetyMaxCount; ++i)
+		{
+			CStatic* lpControl = (CStatic*)GetDlgItem(IDC_STATIC_VIEW_SCHEDULE_INFO_SAFETY_VALUE_1 + i);
+
+			if (!lpControl)
+				continue;
+
+			if ((int)vecSafety.size() > i)
+				lpControl->SetWindowText(vecSafety[i]);
+		}
+
+		CMgrConfig* pMgr = CMgrConfig::GetMgr();
+
+		vector<CString> vecSystemMin;
+		if (pMgr)
+			pMgr->GetSystemSafeInfoMin(vecSystemMin);
+
+		for (int i = 0; i < eViewScheduleSystemSafetyMaxCount; ++i)
+		{
+			CStatic* lpControl = (CStatic*)GetDlgItem(IDC_STATIC_VIEW_SCHEDULE_INFO_SYSTEM_SAFETY_MIN_1 + i);
+
+			if (!lpControl)
+				continue;
+
+			if ((int)vecSystemMin.size() > i)
+				lpControl->SetWindowText(vecSystemMin[i]);
+		}
+
+		vector<CString> vecSystemMax;
+		if (pMgr)
+			pMgr->GetSystemSafeInfoMax(vecSystemMax);
+
+		for (int i = 0; i < eViewScheduleSystemSafetyMaxCount; ++i)
+		{
+			CStatic* lpControl = (CStatic*)GetDlgItem(IDC_STATIC_VIEW_SCHEDULE_INFO_SYSTEM_SAFETY_MAX_1 + i);
+
+			if (!lpControl)
+				continue;
+
+			if ((int)vecSystemMax.size() > i)
+				lpControl->SetWindowText(vecSystemMax[i]);
+		}
+	}	
+}
+
+void	CDlgViewScheduleInfo::LoadStepInfo(int nCurSel)
+{
+	if (nCurSel >= 0)
+	{
+		if (!m_lpScheduleInfo)
+			return;
+
+		CStep* lpStep = m_lpScheduleInfo->GetAtStep(nCurSel+1);
+
+		if (!lpStep)
+			return;
+
+		vector<CString> vecComplete;
+		lpStep->GetCompleteInfo(vecComplete);
+
+		for (int i = 0; i < eViewScheduleCompleteMaxCount; ++i)
+		{
+			CStatic* lpControl = (CStatic*)GetDlgItem(IDC_STATIC_VIEW_SCHEDULE_INFO_COMPLETE_VALUE_1 + i);
+
+			if (!lpControl)
+				continue;
+
+			if((int)vecComplete.size() > i)
+				lpControl->SetWindowText(vecComplete[i]);
+		}				
+
+		for (int i = 0; i < eViewScheduleLogTypeMaxCount; ++i)
+		{
+			CStatic* lpControl = (CStatic*)GetDlgItem(IDC_STATIC_VIEW_SCHEDULE_INFO_SAVE_VALUE_1 + i);
+
+			if (!lpControl)
+				continue;
+		}
+	}
+	else
+	{
+		for (int i = 0; i < eViewScheduleCompleteMaxCount; ++i)
+		{
+			CStatic* lpControl = (CStatic*)GetDlgItem(IDC_STATIC_VIEW_SCHEDULE_INFO_COMPLETE_VALUE_1 + i);
+
+			if (!lpControl)
+				continue;
+
+			lpControl->SetWindowText("");
+		}
+
+		for (int i = 0; i < eViewScheduleLogTypeMaxCount; ++i)
+		{
+			CStatic* lpControl = (CStatic*)GetDlgItem(IDC_STATIC_VIEW_SCHEDULE_INFO_SAVE_VALUE_1 + i);
+
+			if (!lpControl)
+				continue;
+
+			lpControl->SetWindowText("");
+		}
+	}	
+}
+
+void	CDlgViewScheduleInfo::LoadSchedule()
+{
+	LoadModel(false);
+
+	m_listSchedule.DeleteAllItems();
+
+	if (nullptr == m_lpScheduleInfo)
+		return;
+
+	int nIndex = 0;
+
+	CList< CStep*, CStep* >& listStep = m_lpScheduleInfo->GetStepView();
+
+	auto Pos = listStep.GetHeadPosition();
+
+	while (Pos)
+	{
+		CStep* lpStep = listStep.GetNext(Pos);
+
+		if(!lpStep)
+			continue;
+
+		LVITEM Item;
+
+		Item.iItem		= nIndex;
+		Item.mask		= LVIF_TEXT | LVIF_PARAM;
+		Item.stateMask	= LVIS_STATEIMAGEMASK;
+		Item.state		= INDEXTOSTATEIMAGEMASK(1);
+		Item.pszText	= _T("");
+		Item.iSubItem	= 0;
+
+		m_listSchedule.InsertItem(&Item);
+
+		m_listSchedule.SetItemText(nIndex, 0, "");
+
+		vector<CString> vecComplete;
+		lpStep->GetStepInfo(vecComplete);
+
+		int nSubItem = 1;
+
+		auto iter	= vecComplete.begin();
+		auto iterE	= vecComplete.end();
+
+		while (iter != iterE)
+		{
+			CString strValue = (*iter);
+
+			m_listSchedule.SetItemText(nIndex, nSubItem, strValue);
+
+			nSubItem++;
+
+			++iter;
+		}
+
+		nIndex++;
+	}
+}
+
+int		CDlgViewScheduleInfo::GetListCtrlColumnWidth(int nColumnIndex)
+{
+	switch (nColumnIndex)
+	{
+	case eViewScheduleInfoObjectSerial			: return 50;
+	case eViewScheduleInfoObjectStepType		: return 150;
+	case eViewScheduleInfoObjectChargeVoltage	:
+	case eViewScheduleInfoObjectDischargeVoltage:
+	case eViewScheduleInfoObjectChargeCurrent	:
+	case eViewScheduleInfoObjectDischargeCurrent:
+	case eViewScheduleInfoObjectPower: return 80;
+	case eViewScheduleInfoObjectImpedance		: return 0;
+	case eViewScheduleInfoObjectTemperature		: return 65;
+	}
+
+	return 0;
+}

@@ -1,0 +1,244 @@
+﻿//#include "Singleton.h"
+#include <vector>
+#include "CxStatic.h"
+#include "GridCtrl_src/GridCtrl.h"
+
+#pragma once
+
+// CDlgViewEqpChannelStatus 대화 상자
+
+class CDlgViewEqpChannelStatus : public CDialogEx, public CSingleton< CDlgViewEqpChannelStatus >
+{
+	DECLARE_DYNAMIC(CDlgViewEqpChannelStatus)
+
+public:
+	CDlgViewEqpChannelStatus(CWnd* pParent = nullptr);   // 표준 생성자입니다.
+	virtual ~CDlgViewEqpChannelStatus();
+
+	// 대화 상자 데이터입니다.
+//#ifdef AFX_DESIGN_TIME
+	enum { IDD = IDD_DLG_VIEW_EQP_CHANNEL_STATUS };
+//#endif
+
+protected:
+	virtual void DoDataExchange(CDataExchange* pDX);    // DDX/DDV 지원입니다.
+
+	DECLARE_MESSAGE_MAP()
+
+public:
+	afx_msg void OnShowWindow(BOOL bShow, UINT nStatus);
+	afx_msg void OnSize(UINT nType, int cx, int cy);
+	afx_msg void OnPaint();
+	afx_msg HBRUSH OnCtlColor(CDC* pDC, CWnd* pWnd, UINT nCtlColor);
+	afx_msg BOOL OnEraseBkgnd(CDC* pDC);
+	afx_msg void OnTimer(UINT_PTR nIDEvent);
+	afx_msg void OnClose();
+	afx_msg void OnDestroy();
+
+	afx_msg void OnBnClickedBtnViewEqpChannelStatusSelectSchedule();
+	afx_msg void OnBnClickedBtnViewEqpChannelStatusStart();
+	afx_msg void OnBnClickedBtnViewEqpChannelStatusGroup1();
+	afx_msg void OnBnClickedBtnViewEqpChannelStatusGroup2();
+
+public:
+	void	SetSubEqpIndexNo(int nSubEqpIndexNo) { m_nSubEqpIndexNo = nSubEqpIndexNo; }
+	int		GetSubEqpIndexNo() { return m_nSubEqpIndexNo; }
+
+	void	SetSubEqpId(CString sSubEqpId) { m_strSubEqpId = sSubEqpId;}
+	CString GetSubEqpId() { return m_strSubEqpId; }
+
+public:
+	virtual BOOL Create(CWnd* pParentWnd = NULL);
+	virtual BOOL OnInitDialog();
+
+	void Initialize();
+	void InitializeControls();
+	void InitializeTimers();
+
+	bool SetDisplayEqpId(CString eqpId);
+
+private:
+
+	bool LoadDrawINI();
+	bool InitializeChannelInfo();
+
+	bool SetDisplayChannelNo(int nEqpChannelIndexNo, CString sValue);
+	bool SetDisplayChannelVoltage(int nEqpChannelIndexNo, CString sValue);
+	bool SetDisplayChannelAmpare(int nEqpChannelIndexNo, CString sValue);
+	bool SetDisplayChannelAmpareHour(int nEqpChannelIndexNo, CString sValue);
+	bool SetDisplayChannelCode(int nEqpChannelIndexNo, CString sValue);
+	bool SetDisplayChannelTemperature(int nEqpChannelIndexNo, CString sValue);
+
+	bool SetDisplayChannelStepTime(int nEqpChannelIndexNo, CString sValue);
+	bool SetDisplayChannelTotalTime(int nEqpChannelIndexNo, CString sValue);
+	
+	void SetInverterStatus();
+	
+
+
+	COLORREF GetDisplayChannelStatusColor(int nStatusValue);
+
+	COLORREF GetDisplayChannelOpCodeColor(int nOpCodeValue);
+
+	
+	bool SetStaticControlColor(UINT nID, COLORREF crColor);
+
+	bool UpdateEqpChannelStatus();
+
+	// -------------------------------------------------------------------------
+	
+	void SelectSchedule();
+	void SetSelectChannelAll();
+	void SelectMasterSlave();
+	bool IsSystemError();
+	void SetSelectEQChAll(int nEqpStageIndexNo);
+
+	// -------------------------------------------------------------------------
+
+
+	int GetStartCycle();
+	int	GetStartStep();
+	int	GetSyncMode();
+
+	bool IsStepSyncValidate();
+	bool IsTemperatureSyncValidate();
+
+	void SaveHistory();
+
+	void GetCellID(std::vector<CString>& vecValue);
+	void GetCyclerChannelNumber(std::vector<int>& vecValue);
+
+	CString GetScheduleFilePath();
+	CString GetScheduleName();
+	CString GetEqpId();
+	CString GetLoginUserName();
+	CString	GetWorkName();
+	CString GetLogFilePath();
+	CString GetDescription();
+
+private:
+	// CONFIG
+	CStringArray	m_strArrTitle;
+	int				m_nSubEqpIndexNo;
+	CString			m_strSubEqpId;
+
+	int		m_nScheduleLoadingType;
+	int		m_nSelectedStageNo;
+
+	CxShadeButton	m_BtnSelectStageS1;
+	CxShadeButton	m_BtnSelectStageS2;
+
+	CString			m_strStage1;
+	CString			m_strStage2;
+	CString			m_strChStatus[EQ_CH_INDEX];
+	CString			m_strChOpCode[EQ_CH_INDEX];
+
+	CxStatic		m_staticControl[EQ_CH_INDEX];
+	CxStatic		m_staticSetStatusColor[(int)eCyclerChannelStateMaxCount];
+	CxShadeButton	m_BtnSelectCh[EQ_CH_INDEX];
+
+	void UpdataChStatus();
+	void UpdateDaqTemp();
+
+	void OnClickTitleButton(UINT nID);
+
+	BOOL m_bCheckStatus;	
+
+	int m_nBarcodeReadingFocus;
+
+	BOOL m_bChBarcodeCheck;
+public:
+	virtual BOOL PreTranslateMessage(MSG* pMsg);
+
+	CxShadeButton m_Btn_SelectSchedule;
+	CxShadeButton m_Btn_Start;
+	CxShadeButton m_Btn_Pause;
+	
+	afx_msg void OnBnClickedBtnViewEqpChannelStatusPause();
+
+	bool m_bSelectStage[2];
+
+	void SetSelectStage(int nStageNo,bool bSelect);
+	bool GetSelectStage(int nStageNo);
+
+	CxStatic m_Status_Stage1;
+	CxStatic m_Status_Stage2;
+	void ExecProcScheduleStart();
+
+	CxStatic m_staticStepTime[EQ_CH_INDEX];
+	CxStatic m_staticTotalTime[EQ_CH_INDEX];
+
+	CxStatic m_staticTemp[EQ_CH_INDEX];
+
+	CxStatic m_staticAmp[EQ_CH_INDEX];
+	CxStatic m_staticVolt[EQ_CH_INDEX];
+
+	CxStatic m_staticChCode[EQ_CH_INDEX];
+	CxStatic m_staticCapacity[EQ_CH_INDEX];
+
+	CxStatic m_Status_Inverter;
+	afx_msg void OnBnClickedBtnViewEqpChannelStatusComplete();
+	CxShadeButton m_btn_Complete_Option;
+	CxShadeButton m_btn_AlarmClear;
+	afx_msg void OnBnClickedBtnViewEqpChannelStatusAlarmClear();
+	CxStatic m_Status_Schedule;
+	CxStatic m_Status_Schedule_Model;
+	
+
+
+
+	//Stage  UI Visible Function 
+
+	void Set_Stage_UI_Visible();
+
+
+
+	CxStatic m_Title_Stage1_CH;
+	CxStatic m_Title_Stage1_Status;
+	CxStatic m_Title_Stage1_StepTime;
+	CxStatic m_Title_Stage1_TotalTime;
+	CxStatic m_Title_Stage1_Volt;
+	CxStatic m_Title_Stage1_Current;
+	CxStatic m_Title_Stage1_Cap;
+	CxStatic m_Title_Stage1_Code;
+	CxStatic m_Title_Stage1_Temp;
+
+	CxStatic m_Title_Stage2_CH;
+	CxStatic m_Title_Stage2_Status;
+	CxStatic m_Title_Stage2_StepTime;
+	CxStatic m_Title_Stage2_TotalTime;
+	CxStatic m_Title_Stage2_Volt;
+	CxStatic m_Title_Stage2_Current;
+	CxStatic m_Title_Stage2_Cap;
+	CxStatic m_Title_Stage2_Code;
+	CxStatic m_Title_Stage2_Temp;
+
+
+	void Display_Manage();
+
+
+	CxStatic m_Status_Disk;
+	CxStatic m_staticTrayBarcode;
+
+	void SetPlcDataParam();
+	CxStatic m_Line_1;
+	CxStatic m_Status_Start_Message;
+	CxStatic m_staticVacValue;
+
+
+	void Set_BarcodeReadingFocus(int nID);
+
+	int Get_BarcodeReadingFocus() { return m_nBarcodeReadingFocus; }
+
+
+	void UI_BarcodeUpdate();
+
+	void Set_ChBarcodeCheckMode(bool bChBarcodeCheckMode);
+	BOOL Get_ChBarcodeCheckMode() {	return m_bChBarcodeCheck;}
+
+	afx_msg void OnStnClickedStaticViewEqpChannelStatusTraybarcode();
+	afx_msg void OnBnClickedButtonBarcodeOption();
+	CxShadeButton m_Btn_BarcodeOption;
+	CxStatic m_staticVacuumPercent;
+	CxStatic m_Static_Status_AutoMode;
+};

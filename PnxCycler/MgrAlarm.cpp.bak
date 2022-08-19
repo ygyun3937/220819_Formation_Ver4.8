@@ -1,0 +1,900 @@
+#include "stdafx.h"
+#include "MgrAlarm.h"
+
+#include "MgrChannel.h"
+#include "PnxUtil.h"
+#include <bitset>
+#include "MgrCommData.h"
+#include "DlgViewAlarm.h"
+
+#include "SockProc.h"
+
+#ifdef _DEBUG
+#define new DEBUG_NEW
+#undef THIS_FILE
+static char THIS_FILE[] = __FILE__;
+#endif
+
+
+#define	OneByte	( 8 )
+#define	AlarmBitMaxCount	( 16 )
+
+CMgrAlarm::CMgrAlarm()
+{
+	m_pThread = NULL;
+	m_bLoop = FALSE;
+
+
+	InitSysAlarmList(); //lyw4_1 : 알람 리스트 초기화 호출
+	LoadAlarmList();
+	InitInverterAlarm();
+}
+
+
+CMgrAlarm::~CMgrAlarm()
+{
+	RemoveAll();
+	//<!--20210507 add by swseo
+	for (auto it = m_mapSysAlarm.begin(); it != m_mapSysAlarm.end(); ++it)
+	{
+		delete it->second;
+	}
+	m_mapSysAlarm.clear();//-->
+	for (auto it = m_mapInverterAlarm.begin(); it != m_mapInverterAlarm.end(); ++it)
+	{
+		delete it->second;
+	}
+	m_mapSysAlarm.clear();//-->
+}
+
+//lyw4_1 : 알람 리스트 초기화
+void	CMgrAlarm::InitSysAlarmList()
+{
+	for (auto it = m_mapSysAlarm.begin(); it != m_mapSysAlarm.end(); ++it)
+	{
+		delete it->second;
+	}
+	m_mapSysAlarm.clear();
+
+	CList< CChannel*, CChannel* >& listChannel = CMgrChannel::GetMgr()->GetChannelList();
+
+	auto Pos = listChannel.GetHeadPosition();
+
+	while (Pos)
+	{
+		CChannel* pChannel = listChannel.GetNext(Pos);
+
+		if (NULL == pChannel)
+			continue;
+
+		CList<CSysAlarm>* list = new CList<CSysAlarm>();
+		m_mapSysAlarm.insert(std::pair<int, CList<CSysAlarm>*>(pChannel->GetChannelNumber(), list));
+	}
+}
+
+void CMgrAlarm::InitInverterAlarm()
+{
+	for (auto it = m_mapInverterAlarm.begin(); it != m_mapInverterAlarm.end(); ++it)
+	{
+		delete it->second;
+	}
+	m_mapInverterAlarm.clear();
+
+	CList< CChannel*, CChannel* >& listChannel = CMgrChannel::GetMgr()->GetChannelList();
+
+	auto Pos = listChannel.GetHeadPosition();
+
+	while (Pos)
+	{
+		CChannel* pChannel = listChannel.GetNext(Pos);
+
+		if (NULL == pChannel)
+			continue;
+
+		CList<CInverterAlarm>* list = new CList<CInverterAlarm>();
+		m_mapInverterAlarm.insert(std::pair<int, CList<CInverterAlarm>*>(0, list));
+	}
+}
+
+//lyw4_1 : 알람추가
+void	CMgrAlarm::AddSysAlarm(int nChannelNumber, CString strTitle, CString strContents)
+{
+	auto it = m_mapSysAlarm.find(nChannelNumber);
+	if (it == m_mapSysAlarm.end())
+		return;
+
+	CList<CSysAlarm>* pListSysAlarm = it->second;
+
+	if (NULL == pListSysAlarm)
+		return;
+
+	//중복 알람 방지
+	if (pListSysAlarm->GetCount() > 0)
+	{
+		if (pListSysAlarm->GetTail().GetAlarmTitle() == strTitle)
+			return;
+	}
+
+	CSysAlarm sysAlarm;
+	sysAlarm.SetAlarm(strTitle, strContents);
+	pListSysAlarm->AddTail(sysAlarm);
+
+	OutputDebugString(_T("Add sys alarm\r\n")); //lyw log
+}
+
+//lyw4_1 : 알람 초기화
+void	CMgrAlarm::ClearSysAlarm(int nChannelNumber)
+{
+	auto it = m_mapSysAlarm.find(nChannelNumber);
+	if (it == m_mapSysAlarm.end())
+		return;
+
+	CList<CSysAlarm>* pListSysAlarm = it->second;
+
+	if (NULL == pListSysAlarm)
+		return;
+
+	pListSysAlarm->RemoveAll();
+
+	CCommData*	pCommData = NULL;
+	pCommData = CMgrCommData::GetMgr()->GetAt(nChannelNumber);
+	pCommData->SetSystemSafetyEndReason(0);
+}
+
+BOOL CMgrAlarm::AddEqAlarm(int nCode, CString text, int level, ALARM_ITEM * item)
+{
+	/*같은알람 발생금지*/
+	CString strMsg;
+	int nSize = m_veEqAlarm.size();
+	for (int i = 0; i < nSize; i++)
+	{
+		if (m_veEqAlarm[i].code == nCode)
+			return TRUE;
+	}
+	item->code = nCode;
+	item->text.Format(text);
+	item->level = level;
+	item->time = CTime::GetCurrentTime();
+
+	m_veEqAlarm.push_back(*item);
+
+
+	ALARM_ITEM alarm;
+	alarm.code = nCode;
+	alarm.text.Format("%s", text);
+	alarm.level = level;
+
+	CWnd* pWnd = AfxGetApp()->GetMainWnd();
+
+	if (pWnd)
+		::PostMessage(pWnd->GetSafeHwnd(), WM_UPDATE_VIEW_ALARM, (WPARAM)&alarm, 0);
+
+	return TRUE;
+}
+
+tagVEALARM CMgrAlarm::GetEqAlarm()
+{
+	return m_veEqAlarm;
+}
+
+void CMgrAlarm::ClearEqAlarm()
+{
+	int nSize = m_veEqAlarm.size();
+	if (nSize == 0)
+		return;
+	for (int i = 0; i < nSize; i++)
+	{
+		m_veEqAlarm.erase(m_veEqAlarm.begin());
+	}
+}
+
+//lyw4_1 : 시스템 알람 리스트 가져오기
+CList<CSysAlarm>* CMgrAlarm::GetSysAlarmList(int nChannelNumber)
+{
+	auto it = m_mapSysAlarm.find(nChannelNumber);
+	if (it == m_mapSysAlarm.end())
+		return NULL;
+
+	CList<CSysAlarm>* pListSysAlarm = it->second;
+
+	return pListSysAlarm;
+}
+
+CList<CInverterAlarm>* CMgrAlarm::GetInverterAlarmList()
+{
+	auto it = m_mapInverterAlarm.find(0);
+	if (it == m_mapInverterAlarm.end())
+		return NULL;
+
+	CList<CInverterAlarm>* pListSysAlarm = it->second;
+
+	return pListSysAlarm;
+}
+
+
+void	CMgrAlarm::LoadAlarmList()
+{
+	RemoveAll();
+
+	CList< CChannel*, CChannel* >& listChannel = CMgrChannel::GetMgr()->GetChannelList();
+
+	auto Pos = listChannel.GetHeadPosition();
+
+	while (Pos)
+	{
+		CChannel* pChannel = listChannel.GetNext(Pos);
+
+		if (NULL == pChannel)
+			continue;
+
+		CAlarmMap* pAlarmMap = new CAlarmMap;
+
+		pAlarmMap->LoadAlarm();
+
+		Add(pChannel->GetChannelNumber(), pAlarmMap);
+	}
+}
+
+void	CMgrAlarm::Add(int nChannelNumber, CAlarmMap* pNewElement)
+{
+	auto it = m_mapAlarm.find(nChannelNumber);
+
+	// 못찾았음
+	if (it == m_mapAlarm.end())
+	{
+		m_mapAlarm.insert(std::pair<int, CAlarmMap*>(nChannelNumber, pNewElement));
+	}
+}
+
+void	CMgrAlarm::RemoveAll()
+{
+	for (auto it = m_mapAlarm.begin(); it != m_mapAlarm.end(); ++it)
+	{
+		delete it->second;
+	}
+
+	m_mapAlarm.clear();
+}
+
+void	CMgrAlarm::GetChannelAlarm(int nChannel, int nIndex, CStringArray& arr)
+{
+	auto it = m_mapAlarm.find(nChannel);
+
+	if (it == m_mapAlarm.end())
+		return;
+
+	// 실제 List 에 뿌려야 할 각 Row 는 AlarmType1 의 Str,AlarmType2 의 Str,AlarmType3 의 Str,AlarmType4 의 Str,AlarmType1 의 Str 이다.
+	// 즉, 각 Type 별 가장 상위의 Data 를 하나씩 빼와서 어레이에 뿌려줘야 함..
+
+	CAlarmMap* pAlarmMap = it->second;
+
+	if (NULL == pAlarmMap)
+		return;
+
+	CString str;
+
+	str.Format(_T("BIT %d"), nIndex);
+
+	arr.Add(str);
+
+	for (int i = 0; i <= eAlarmTypeIFFault; ++i)
+	{
+		CAlarmList* pAlarmList = pAlarmMap->GetAlarmList(i);
+
+		if (NULL == pAlarmList)
+			continue;
+
+		CAlarm* pAlarm = pAlarmList->GetAlarm(nIndex);
+
+		if (NULL == pAlarm)
+			continue;
+
+		arr.Add(pAlarm->GetAlarmStr());
+	}
+}
+
+void CMgrAlarm::GetChannelInverterAlarm(int nIndex, CStringArray & arr)
+{
+	auto it = m_mapAlarm.find(0);
+
+	if (it == m_mapAlarm.end())
+		return;
+
+	// 실제 List 에 뿌려야 할 각 Row 는 AlarmType1 의 Str,AlarmType2 의 Str,AlarmType3 의 Str,AlarmType4 의 Str,AlarmType1 의 Str 이다.
+	// 즉, 각 Type 별 가장 상위의 Data 를 하나씩 빼와서 어레이에 뿌려줘야 함..
+
+	CAlarmMap* pAlarmMap = it->second;
+
+	if (NULL == pAlarmMap)
+		return;
+
+	CString str;
+
+	str.Format(_T("BIT %d"), nIndex);
+
+	arr.Add(str);
+
+	for (int i = eAlarmTypeCANIGBT; i < eAlarmTypeMaxCount; ++i)
+	{
+		CAlarmList* pAlarmList = pAlarmMap->GetAlarmList(i);
+
+		if (NULL == pAlarmList)
+			continue;
+
+		CAlarm* pAlarm = pAlarmList->GetAlarm(nIndex);
+
+		if (NULL == pAlarm)
+			continue;
+
+		arr.Add(pAlarm->GetAlarmStr());
+	}
+
+
+}
+
+void	CMgrAlarm::GetChannelAlarm(int nChannel, int nIndex, __int16* pBuff)
+{
+	auto it = m_mapAlarm.find(nChannel);
+	bitset<16> bitAlarm;
+	bitAlarm.reset();
+
+	if (it == m_mapAlarm.end())
+		return;
+
+	// 실제 List 에 뿌려야 할 각 Row 는 AlarmType1 의 Str,AlarmType2 의 Str,AlarmType3 의 Str,AlarmType4 의 Str,AlarmType1 의 Str 이다.
+	// 즉, 각 Type 별 가장 상위의 Data 를 하나씩 빼와서 어레이에 뿌려줘야 함..
+
+	CAlarmMap* pAlarmMap = it->second;
+
+	if (NULL == pAlarmMap)
+		return;
+
+	CAlarmList* pAlarmList = pAlarmMap->GetAlarmList(nIndex);
+
+	for (int i = 0; i < AlarmBitMaxCount; ++i)
+	{
+		if (NULL == pAlarmList)
+			continue;
+
+		CAlarm* pAlarm = pAlarmList->GetAlarm(i);
+
+		if (NULL == pAlarm)
+			continue;
+		bitAlarm[i] = pAlarm->GetAlarmSet();
+	}
+
+	*pBuff = (__int16)bitAlarm.to_ulong();
+
+	*pBuff = _byteswap_ushort(*pBuff);
+}
+
+CAlarmMap*	CMgrAlarm::GetAlarmMap(int nChannelNo)
+{
+	auto it = m_mapAlarm.find(nChannelNo);
+
+	if (it == m_mapAlarm.end())
+		return NULL;
+
+	return it->second;
+}
+
+BOOL	CMgrAlarm::ExistChannelAlarm(int nChannel)
+{
+	auto it = m_mapAlarm.find(nChannel);
+
+	if (it == m_mapAlarm.end())
+		return FALSE;
+
+	CAlarmMap* pAlarmMap = it->second;
+
+	if (NULL == pAlarmMap)
+		return FALSE;
+
+	return pAlarmMap->ExistAlarm();
+}
+
+void	CMgrAlarm::StartThread()
+{
+	/*
+	if (!m_pThread)
+		m_pThread = AfxBeginThread(OnDB2AlarmThread, this, THREAD_PRIORITY_NORMAL, 0, 0, NULL);
+	*/
+
+}
+
+void	CMgrAlarm::StopThread()
+{
+	m_bLoop = FALSE;
+
+	if (m_pThread)
+	{
+		::WaitForSingleObject(m_pThread->m_hThread, INFINITE);
+
+		m_pThread = NULL;
+	}
+}
+
+UINT	CMgrAlarm::OnDB2AlarmThread(LPVOID pParam)
+{
+	CMgrAlarm* pMgr = (CMgrAlarm*)pParam;
+	//2021-02-23 cnz
+	if (pMgr == NULL)
+		return 0;
+
+	while (pMgr->m_bLoop)
+	{
+		Sleep(1);
+	}
+
+	return 0;
+}
+
+void	CMgrAlarm::AddAlarm(int nChannelNumber, int nType, BYTE byAlarm)
+{
+	CAlarmMap* pAlarmMap = GetAlarmMap(nChannelNumber);
+
+	if (NULL == pAlarmMap)
+		return;
+
+	CAlarmList* pAlarmList = pAlarmMap->GetAlarmList(nType);
+
+	if (NULL == pAlarmList)
+		return;
+
+	// Alarm 을 Byte 단위로 받음 만약 넘으면 Size 값 늘리면 됨 ㅎㅎ
+	BOOL arr[OneByte] = { FALSE, };
+
+	BOOL bAlarmClear = FALSE;
+
+	for (int i = 0; i < OneByte; ++i)
+	{
+		arr[i] = (byAlarm & (1 << i)) != 0;
+
+		if (i == 3 && arr[i] == TRUE)
+		{
+			bAlarmClear = TRUE;
+
+			break;
+		}
+
+		// 기존에 Grid Alarm 의 0, 1 은 인식 하지 않도록 설정 되어 있었음.
+		/*
+		if (AlarmTypeGrid == nType)
+		{
+			if (i == 0 || i == 1 )
+				continue;
+		}
+		*/
+
+		CAlarm* pAlarm = pAlarmList->GetAlarm(i);
+
+		if (pAlarm)
+		{
+			pAlarm->SetAlarmSet(arr[i]);
+		}
+	}
+
+	// 현재 Serial Module 에서는 0x08 값이 TRUE 면 Alarm Clear 로 인식한다.
+	if (TRUE == bAlarmClear)
+	{
+		pAlarmList->SetAllAlarm(FALSE);
+	}
+}
+
+// CString	CMgrAlarm::AddAlarmCan(int nChannelNumber, int nWr, int nGrd, int nDc, int nFault)
+// {
+// 	
+// }
+
+CString	CMgrAlarm::AddAlarm(int nChannelNumber, int nType, BYTE byAlarm1, BYTE byAlarm2)
+{
+	CAlarmMap* pAlarmMap = GetAlarmMap(nChannelNumber);
+
+	if (NULL == pAlarmMap)
+		return "";
+
+	CAlarmList* pAlarmList = pAlarmMap->GetAlarmList(nType);
+
+	if (NULL == pAlarmList)
+		return "";
+
+	CString strAlarmText;
+
+	pAlarmList->SetAllAlarm(FALSE);
+
+	CArray< int, int > arr;
+
+	CPnxUtil::GetMgr()->SplitByte(byAlarm1, arr);
+
+	for (int i = 0; i < arr.GetSize(); ++i)
+	{
+		int nIndex = arr.GetAt(i);
+
+		CAlarm* pAlarm = pAlarmList->GetAlarm(nIndex);
+
+		if (pAlarm)
+		{
+			pAlarm->SetAlarmSet(TRUE);
+
+			strAlarmText.Format("%s", (LPCSTR)pAlarm->GetAlarmText());
+
+			WriteAlarmHistory(nChannelNumber, pAlarm);
+		}
+	}
+
+	arr.RemoveAll();
+
+	CPnxUtil::GetMgr()->SplitByte(byAlarm2, arr);
+
+	for (int i = 0; i < arr.GetSize(); ++i)
+	{
+		int nIndex = arr.GetAt(i);
+
+		CAlarm* pAlarm = pAlarmList->GetAlarm(nIndex + 8);
+
+		if (pAlarm)
+		{
+			pAlarm->SetAlarmSet(TRUE);
+
+			strAlarmText.Format("%s", (LPCSTR)pAlarm->GetAlarmText());
+
+			WriteAlarmHistory(nChannelNumber, pAlarm);
+		}
+	}
+
+	if (TRUE == pAlarmList->ExistAlarm())
+	{
+		CWnd* pWnd = AfxGetApp()->GetMainWnd();
+
+		if (pWnd)
+			::PostMessage(pWnd->GetSafeHwnd(), WM_UPDATE_VIEW_ALARM, 0, 0);
+	}
+
+	return strAlarmText;
+}
+
+
+
+CString CMgrAlarm::AddInverterAlarmCan(int nAlarmType, BYTE byteAlarm2, BYTE byteAlarm1)
+{
+	int nChannelNumber = 0;
+	CAlarmMap* pAlarmMap = GetAlarmMap(nChannelNumber);
+
+	if (NULL == pAlarmMap)
+		return "";
+
+	CAlarmList* pAlarmList = pAlarmMap->GetAlarmList(nAlarmType);
+
+	if (NULL == pAlarmList)
+		return "";
+
+	CString strAlarmText;
+
+	pAlarmList->SetAllAlarm(FALSE);
+
+	CArray< int, int > arr;
+
+	CPnxUtil::GetMgr()->SplitByte(byteAlarm1, arr);
+
+	for (int i = 0; i < arr.GetSize(); ++i)
+	{
+		int nIndex = arr.GetAt(i);
+
+		CAlarm* pAlarm = pAlarmList->GetAlarm(nIndex);
+
+		if (pAlarm)
+		{
+			//pAlarmList->SetAllAlarm(TRUE);
+
+			pAlarm->SetAlarmSet(TRUE);
+
+			strAlarmText.Format("%s", (LPCSTR)pAlarm->GetAlarmText());
+
+			WriteAlarmHistory(nChannelNumber, pAlarm);
+		}
+	}
+
+	arr.RemoveAll();
+
+	CPnxUtil::GetMgr()->SplitByte(byteAlarm2, arr);
+
+	for (int i = 0; i < arr.GetSize(); ++i)
+	{
+		int nIndex = arr.GetAt(i);
+
+		CAlarm* pAlarm = pAlarmList->GetAlarm(nIndex + 8);
+
+		if (pAlarm)
+		{
+			pAlarm->SetAlarmSet(TRUE);
+
+			strAlarmText.Format("%s", (LPCSTR)pAlarm->GetAlarmText());
+
+			WriteAlarmHistory(nChannelNumber, pAlarm);
+		}
+	}
+
+	if (TRUE == pAlarmList->ExistAlarm())
+	{
+		CWnd* pWnd = AfxGetApp()->GetMainWnd();
+
+		if (pWnd)
+			::PostMessage(pWnd->GetSafeHwnd(), WM_UPDATE_VIEW_ALARM, 0, 0);
+	}
+
+	return strAlarmText;
+}
+
+/**
+ * 
+ * 
+ * METHOD_NAME : AddAlarmCan
+ * METHOD_TYPE : -
+ * DESCRIPTION : PCAN
+ * \return 
+ */
+CString CMgrAlarm::AddAlarmCan(int nChannelNumber, int nIGBT, int nWr, int nGrd, int nDc, int nFault)
+{
+	if (nIGBT != 0x00 &&
+		nIGBT != 0xdd)
+	{
+		int n = 0;
+	}
+
+	CAlarmMap* pAlarmMap = GetAlarmMap(nChannelNumber);
+	CString strAlarmText = "";
+
+	if (NULL == pAlarmMap)
+		return strAlarmText;
+
+	CAlarmList* pAlarmList = pAlarmMap->GetAlarmList(eAlarmTypeCANWarning);
+	if (NULL == pAlarmList)
+		return strAlarmText;
+
+	pAlarmList->SetAllAlarm(FALSE);
+
+	CArray< int, int > arr;
+
+	CPnxUtil::GetMgr()->SplitWord(nWr, arr);
+
+	for (int i = 0; i < arr.GetSize(); ++i)
+	{
+		int nIndex = arr.GetAt(i);
+
+		CAlarm* pAlarm = pAlarmList->GetAlarm(nIndex);
+
+		if (pAlarm)
+		{
+			pAlarm->SetAlarmSet(TRUE);
+
+			strAlarmText.Format("%s", pAlarm->GetAlarmText());
+
+			//			TRACE("num : %d text : %s\r\n", i, strAlarmText);
+
+			WriteAlarmHistory(nChannelNumber, pAlarm);
+		}
+	}
+
+	pAlarmList = pAlarmMap->GetAlarmList(eAlarmTypeCANGrid);
+	if (NULL == pAlarmList)
+		return strAlarmText;
+
+	pAlarmList->SetAllAlarm(FALSE);
+
+	arr.RemoveAll();
+
+	CPnxUtil::GetMgr()->SplitWord(nGrd, arr);
+
+	for (int i = 0; i < arr.GetSize(); ++i)
+	{
+		int nIndex = arr.GetAt(i);
+
+		CAlarm* pAlarm = pAlarmList->GetAlarm(nIndex);
+
+		if (pAlarm)
+		{
+			pAlarm->SetAlarmSet(TRUE);
+
+			strAlarmText.Format("%s", pAlarm->GetAlarmText());
+
+			//	TRACE("num : %d text : %s\r\n", i, strAlarmText);
+
+			WriteAlarmHistory(nChannelNumber, pAlarm);
+		}
+	}
+
+	pAlarmList = pAlarmMap->GetAlarmList(eAlarmTypeCANDC);
+	if (NULL == pAlarmList)
+		return strAlarmText;
+
+	pAlarmList->SetAllAlarm(FALSE);
+
+	arr.RemoveAll();
+
+	CPnxUtil::GetMgr()->SplitWord(nDc, arr);
+
+	for (int i = 0; i < arr.GetSize(); ++i)
+	{
+		int nIndex = arr.GetAt(i);
+
+		CAlarm* pAlarm = pAlarmList->GetAlarm(nIndex);
+
+		if (pAlarm)
+		{
+			pAlarm->SetAlarmSet(TRUE);
+
+			strAlarmText.Format("%s", pAlarm->GetAlarmText());
+
+			//TRACE("num : %d text : %s\r\n", i, strAlarmText);
+
+			WriteAlarmHistory(nChannelNumber, pAlarm);
+		}
+	}
+
+	pAlarmList = pAlarmMap->GetAlarmList(eAlarmTypeCANFault);
+	if (NULL == pAlarmList)
+		return strAlarmText;
+
+	pAlarmList->SetAllAlarm(FALSE);
+
+	arr.RemoveAll();
+
+	CPnxUtil::GetMgr()->SplitWord(nFault, arr);
+
+	for (int i = 0; i < arr.GetSize(); ++i)
+	{
+		int nIndex = arr.GetAt(i);
+
+		CAlarm* pAlarm = pAlarmList->GetAlarm(nIndex);
+
+		if (pAlarm)
+		{
+			pAlarm->SetAlarmSet(TRUE);
+
+			strAlarmText.Format("%s", pAlarm->GetAlarmText());
+
+			//TRACE("num : %d text : %s\r\n", i, strAlarmText);
+
+			WriteAlarmHistory(nChannelNumber, pAlarm);
+		}
+	}
+
+
+	pAlarmList = pAlarmMap->GetAlarmList(eAlarmTypeCANIGBT);//20190410
+	if (NULL == pAlarmList)
+		return strAlarmText;
+
+	pAlarmList->SetAllAlarm(FALSE);
+
+	arr.RemoveAll();
+
+	CPnxUtil::GetMgr()->SplitWord(nIGBT, arr);
+
+	for (int i = 0; i < arr.GetSize(); ++i)
+	{
+		int nIndex = arr.GetAt(i);
+
+		CAlarm* pAlarm = pAlarmList->GetAlarm(nIndex);
+
+		if (pAlarm)
+		{
+			pAlarm->SetAlarmSet(TRUE);
+
+			strAlarmText.Format("%s", pAlarm->GetAlarmText());
+
+			//TRACE("num : %d text : %s\r\n", i, strAlarmText);
+
+			WriteAlarmHistory(nChannelNumber, pAlarm);
+		}
+	}
+
+
+	for (int i = eAlarmTypeCANWarning; i < eAlarmTypeMaxCount; i++)
+	{
+		pAlarmList = pAlarmMap->GetAlarmList(i);
+
+		if (TRUE == pAlarmList->ExistAlarm())
+		{
+			CWnd* pWnd = AfxGetApp()->GetMainWnd();
+
+			if (pWnd)
+				::PostMessage(pWnd->GetSafeHwnd(), WM_UPDATE_VIEW_ALARM, nChannelNumber, 0);
+		}
+	}
+
+	// 	BOOL bShow = SW_HIDE;
+	// 	if (TRUE == pAlarmMap->ExistAlarm())
+	// 	{
+	// 		bShow = SW_SHOW;
+	// 	}
+	// 
+	// 	CWnd* pWnd = AfxGetApp()->GetMainWnd();
+	// 	
+	// 	if (pWnd)
+	// 		::PostMessage(pWnd->GetSafeHwnd(), WM_UPDATE_VIEW_ALARM, bShow, 0);
+
+	TCHAR szBuff[4096];
+	memset(szBuff, 0x00, sizeof(szBuff));
+	szBuff[0] = '@';
+	szBuff[1] = 'A';
+	szBuff[2] = 0x00;
+	szBuff[3] = 16;
+	szBuff[4] = nChannelNumber;
+	szBuff[5] = 0;
+	szBuff[6] = 0x00;
+	szBuff[7] = 0x00;
+	szBuff[8] = nWr >> 8 & 0xFF;
+	szBuff[9] = nWr & 0xFF;
+	szBuff[10] = nGrd >> 8 & 0xFF;
+	szBuff[11] = nGrd;
+	szBuff[12] = nDc >> 8 & 0xFF;
+	szBuff[13] = nDc;
+	szBuff[14] = nFault >> 8 & 0xFF;
+	szBuff[15] = nFault;
+	szBuff[16] = nIGBT >> 8 & 0xFF;
+	szBuff[17] = nIGBT;
+	szBuff[18] = '$';
+	szBuff[19] = '$';
+
+	if (CSockProc::GetMgr())
+		CSockProc::GetMgr()->SendToRemote(szBuff, 20);
+	return strAlarmText;
+}
+void CMgrAlarm::ClearAlarm(int nChannelNumber, int nType)
+{
+	CAlarmMap* pAlarmMap = GetAlarmMap(nChannelNumber);
+
+	if (NULL == pAlarmMap)
+		return;
+
+	CAlarmList* pAlarmList = pAlarmMap->GetAlarmList(nType);
+
+	if (NULL == pAlarmList)
+		return ;
+
+	pAlarmList->RemoveAll();
+
+	CCommData*	pCommData = NULL;
+	pCommData = CMgrCommData::GetMgr()->GetAt(0);
+	pCommData->SetEndReason(0);
+}
+void CMgrAlarm::ClearInverterAlarm()
+{
+	auto it = m_mapInverterAlarm.find(0);
+	if (it == m_mapInverterAlarm.end())
+		return;
+
+	CList<CInverterAlarm>* pListInverterAlarm = it->second;
+
+	if (NULL == pListInverterAlarm)
+		return;
+
+	pListInverterAlarm->RemoveAll();
+
+	CCommData*	pCommData = NULL;
+	pCommData = CMgrCommData::GetMgr()->GetAt(0);
+	pCommData->SetInverterEndReason(0);
+}
+
+void	CMgrAlarm::WriteAlarmHistory(int nChannelNumber, CAlarm* pAlarm)
+{
+	if (NULL == pAlarm)
+		return;
+
+	CString strFilePath;
+
+	CTime tm = CTime::GetCurrentTime();
+
+	strFilePath.Format("%s\\AlarmHistory\\%s.txt", (LPCSTR)GetExePath(), tm.Format("%Y_%m_%d").GetString());
+
+	FILE* fp = NULL;
+
+	fopen_s(&fp, strFilePath, "a+");
+
+	if (NULL == fp)
+		return;
+
+	fprintf(fp, "%s, CH(%d), %s\n", (LPCSTR)CPnxUtil::GetMgr()->GetTime(), nChannelNumber + 1, (LPCSTR)pAlarm->GetAlarmText());
+
+	fclose(fp);
+}

@@ -1,0 +1,197 @@
+﻿// CDlgEditUser.cpp: 구현 파일
+//
+
+#include "stdafx.h"
+#include "PnxCycler.h"
+#include "CDlgEditUser.h"
+#include "afxdialogex.h"
+#include "CMgrAccount.h"
+#include "MgrConfig.h"
+#include "CDlgViewLogIn.h"
+
+#ifdef _DEBUG
+#define new DEBUG_NEW
+#undef THIS_FILE
+static char THIS_FILE[] = __FILE__;
+#endif
+
+
+// CDlgEditUser 대화 상자
+
+IMPLEMENT_DYNAMIC(CDlgEditUser, CDialogEx)
+
+CDlgEditUser::CDlgEditUser(CWnd* pParent /*=nullptr*/)
+	: CDialogEx(IDD_DLG_USER_ADD, pParent)
+{
+
+}
+
+CDlgEditUser::~CDlgEditUser()
+{
+}
+
+void CDlgEditUser::DoDataExchange(CDataExchange* pDX)
+{
+	CDialogEx::DoDataExchange(pDX);
+	DDX_Text(pDX, IDC_EDIT_ADD_USER, m_strUserID);
+	DDX_Text(pDX, IDC_EDIT_ADD_PASSWORD, m_strUserPW);
+	DDX_Text(pDX, IDC_EDIT_ADD_PATH, m_strUserFilePath);
+	DDX_Control(pDX, IDC_COMBO_USER_LEVEL, m_cbUserLevel);
+}
+
+
+BEGIN_MESSAGE_MAP(CDlgEditUser, CDialogEx)
+	ON_WM_DESTROY()
+	ON_BN_CLICKED(IDC_BTN_ADD_PATH, &CDlgEditUser::OnBnClickedBtnAddPath)
+	ON_BN_CLICKED(IDC_BTN_USER_ADD_ADD, &CDlgEditUser::OnBnClickedBtnUserAddAdd)
+	ON_BN_CLICKED(IDC_BTN_USER_ADD_CLOSE, &CDlgEditUser::OnBnClickedBtnUserAddClose)
+	ON_CBN_SELCHANGE(IDC_COMBO_USER_LEVEL, &CDlgEditUser::OnCbnSelchangeComboUserLevel)
+END_MESSAGE_MAP()
+
+
+// CDlgEditUser 메시지 처리기
+BOOL CDlgEditUser::Create(CWnd* pParentWnd)
+{
+	return __super::Create(IDD, pParentWnd);
+}
+
+BOOL CDlgEditUser::OnInitDialog()
+{
+	CDialogEx::OnInitDialog();
+
+	InitStatic();
+	m_cbUserLevel.SetCurSel(0);
+
+	CenterWindow();	
+
+	return TRUE;  // return TRUE unless you set the focus to a control
+	// 예외: OCX 속성 페이지는 FALSE를 반환해야 합니다.
+}
+
+void CDlgEditUser::OnDestroy()
+{
+	CDialogEx::OnDestroy();
+}
+
+void	CDlgEditUser::InitStatic()
+{
+	LPCTSTR lpszText[] = { "User ID", "Password", "Log Path" };
+	LPCTSTR lpszUserLevelText[] = { "Admin", "Engineer", "Operator" };
+
+	for (int i = 0; i < eUserAddObjectMaxCount; ++i)
+		CST_DEFAULT(m_ctrlText[i], IDC_STATIC_USER_ADD_TEXT_1 + i, this, 16, 0, TRUE, ColorLightGray, ColorWhite, lpszText[i]);
+
+	for (int i = 0; i < eUserLevelMax; i++)
+	{
+		m_cbUserLevel.InsertString(i, lpszUserLevelText[i]);
+	}
+
+}
+
+void CDlgEditUser::OnBnClickedBtnUserAddAdd()
+{
+	UpdateData(TRUE);
+
+	if (m_strUserID.IsEmpty() || m_strUserPW.IsEmpty()||m_strUserLevel.IsEmpty())
+	{
+		AfxMessageBox("필요한 정보가 공백이라 작업자 추가할 수 없습니다.");
+
+		return;
+	}
+
+	CMgrAccount* pMgr = CMgrAccount::GetMgr();
+
+	if (nullptr == pMgr)
+		return;
+
+	if (true == pMgr->IsExistUserID(m_strUserID))
+	{
+		AfxMessageBox("동일한 작업자 ID 가 존재하여 추가할 수 없습니다");
+
+		return;
+	}
+
+	sAccount* pNewElement = new sAccount;
+
+	_tcscpy_s(pNewElement->szUserID, m_strUserID);
+	_tcscpy_s(pNewElement->szUserPW, m_strUserPW);
+	_tcscpy_s(pNewElement->szUserLevel, m_strUserLevel);
+
+
+	if (FALSE == m_strUserFilePath.IsEmpty())
+		_tcscpy_s(pNewElement->szSaveFilePath, m_strUserFilePath);
+	else
+	{
+		CMgrConfig* pMgrConfig = CMgrConfig::GetMgr();
+
+		if(pMgrConfig)
+			_tcscpy_s(pNewElement->szSaveFilePath, pMgrConfig->GetLogFilePath());
+	}
+
+	pMgr->AddNewAccount(pNewElement);
+
+	CString strPopupText;
+	strPopupText.Format("작업자ID %s 를 정상적으로 추가 하였습니다. 작업자별 채널뷰는 기본으로 설정됩니다", (LPCSTR)m_strUserID);
+
+	 
+	CDlgViewLogIn* pDlgViewLogin = CDlgViewLogIn::GetMgr();
+	pDlgViewLogin->SetUserList();
+
+	AfxMessageBox(strPopupText);
+}
+
+
+void CDlgEditUser::OnBnClickedBtnUserAddClose()
+{
+	ShowWindow(SW_HIDE);
+}
+
+void CDlgEditUser::OnBnClickedBtnAddPath()
+{
+	BROWSEINFO sBrowserInfo;
+	::ZeroMemory(&sBrowserInfo, sizeof(BROWSEINFO));
+
+	TCHAR szFilePath[_MAX_PATH] = _T("");
+
+	sBrowserInfo.hwndOwner		= NULL;
+	sBrowserInfo.pidlRoot		= NULL;
+	sBrowserInfo.pszDisplayName = szFilePath;
+	sBrowserInfo.lpszTitle		= _T("저장 경로 선택");
+	sBrowserInfo.ulFlags		= BIF_NEWDIALOGSTYLE | BIF_EDITBOX | BIF_RETURNONLYFSDIRS;
+	sBrowserInfo.lpfn			= BrowseCalbackProc;
+
+	CString strFilePath;
+
+	CMgrConfig* pMgr = CMgrConfig::GetMgr();
+
+	if (pMgr)
+		strFilePath = pMgr->GetLogFilePath();
+
+	sBrowserInfo.lParam = (LPARAM)strFilePath.GetBuffer(strFilePath.GetLength());
+
+	LPITEMIDLIST lpItem = ::SHBrowseForFolder(&sBrowserInfo);
+	
+	strFilePath.ReleaseBuffer();
+
+	if (lpItem)
+	{
+		SHGetPathFromIDList(lpItem, szFilePath);
+
+		m_strUserFilePath.Format("%s", szFilePath);
+
+		((CEdit*)GetDlgItem(IDC_EDIT_ADD_PATH))->SetWindowText(m_strUserFilePath);
+	}
+}
+
+
+void CDlgEditUser::OnCbnSelchangeComboUserLevel()
+{
+	int iSel = m_cbUserLevel.GetCurSel();
+
+
+	if (CB_ERR != iSel)
+	{
+		m_cbUserLevel.GetLBText(iSel, m_strUserLevel);
+	}
+
+}

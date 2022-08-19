@@ -1,0 +1,578 @@
+﻿// CDlgViewIoMap.cpp: 구현 파일
+//
+
+//#include "pch.h"
+#include "stdafx.h"
+#include "PnxCycler.h"
+#include "CDlgViewIoMap.h"
+#include "afxdialogex.h"
+
+#include "MgrConfig.h"
+#include "MgrDio.h" 
+
+#define OnTimeIoMapId	(10001)
+
+// CDlgViewIoMap 대화 상자
+
+IMPLEMENT_DYNAMIC(CDlgViewIoMap, CDialogEx)
+
+CDlgViewIoMap::CDlgViewIoMap(CWnd* pParent /*=nullptr*/)
+	: CDialogEx(IDD_DLG_VIEW_IO_MAP, pParent)
+{
+
+}
+
+CDlgViewIoMap::~CDlgViewIoMap()
+{
+}
+
+void CDlgViewIoMap::DoDataExchange(CDataExchange* pDX)
+{
+	CDialogEx::DoDataExchange(pDX);
+
+	DDX_Control(pDX, IDC_CBO_VIEW_IO_MAP_SUBEQPID, m_cboSubEqpList);
+	DDX_Control(pDX, IDC_CBO_VIEW_IO_MAP_STAGEID, m_cboEqpStageList);
+	
+	for (int i = 0; i < IO_VALUE_COUNT; i++)
+	{
+		DDX_Control(pDX, IDC_STATIC_VIEW_IO_INFO_NAME_INPUT00 + i, m_InputIO_Address[i]);
+		DDX_Control(pDX, IDC_STATIC_VIEW_IO_INFO_DESC_INPUT00 + i, m_InputIO_Status[i]);
+		DDX_Control(pDX, IDC_STATIC_VIEW_IO_INFO_NAME_OUTPUT00 + i, m_OuputIO_Address[i]);
+		DDX_Control(pDX, IDC_BTN_VIEW_IO_INFO_ACT_OUTPUT00 + i, m_OutPutIO_Status[i]);
+	}
+}
+
+BEGIN_MESSAGE_MAP(CDlgViewIoMap, CDialogEx)
+	ON_WM_SHOWWINDOW()
+	ON_WM_DRAWITEM()
+	ON_WM_CTLCOLOR()
+	ON_WM_TIMER()
+	ON_WM_CLOSE()
+	ON_WM_DESTROY()
+
+	ON_COMMAND_RANGE(IDC_BTN_VIEW_IO_INFO_ACT_OUTPUT00, IDC_BTN_VIEW_IO_INFO_ACT_OUTPUT31, OnOutputClickCommand)
+	
+	ON_BN_CLICKED(IDC_BTN_VIEW_IO_MAP_CLOSE, &CDlgViewIoMap::OnBnClickedBtnViewIoMapClose)
+	ON_BN_CLICKED(IDC_BTN_VIEW_IO_MAP_INPUT_PREV, &CDlgViewIoMap::OnBnClickedBtnViewIoMapInputPrev)
+	ON_BN_CLICKED(IDC_BTN_VIEW_IO_MAP_INPUT_NEXT, &CDlgViewIoMap::OnBnClickedBtnViewIoMapInputNext)
+	ON_BN_CLICKED(IDC_BTN_VIEW_IO_MAP_OUTPUT_PREV, &CDlgViewIoMap::OnBnClickedBtnViewIoMapOutputPrev)
+	ON_BN_CLICKED(IDC_BTN_VIEW_IO_MAP_OUTPUT_NEXT, &CDlgViewIoMap::OnBnClickedBtnViewIoMapOutputNext)
+	ON_CBN_SELCHANGE(IDC_CBO_VIEW_IO_MAP_SUBEQPID, &CDlgViewIoMap::OnCbnSelchangeCboViewIoMapSubeqpid)
+	ON_CBN_SELCHANGE(IDC_CBO_VIEW_IO_MAP_STAGEID, &CDlgViewIoMap::OnCbnSelchangeCboViewIoMapStageid)
+	ON_BN_CLICKED(IDC_BTN_VIEW_IO_INFO_ACT_OUTPUT00, &CDlgViewIoMap::OnBnClickedBtnViewIoInfoActOutput00)
+END_MESSAGE_MAP()
+
+// -------------------------------------------------------------------------------------------------
+
+// CDlgViewIoMap 메시지 처리기
+
+void CDlgViewIoMap::OnShowWindow(BOOL bShow, UINT nStatus)
+{
+	//__super::OnShowWindow(bShow, nStatus);
+	CDialogEx::OnShowWindow(bShow, nStatus);
+
+	// TODO: 여기에 메시지 처리기 코드를 추가합니다.
+
+	if (bShow == TRUE)
+	{
+		KillTimer(OnTimeIoMapId);
+		SetTimer(OnTimeIoMapId, 500, NULL);
+	}
+	else
+	{
+		KillTimer(OnTimeIoMapId);
+	}
+}
+
+HBRUSH CDlgViewIoMap::OnCtlColor(CDC* pDC, CWnd* pWnd, UINT nCtlColor)
+{
+	HBRUSH hbr = __super::OnCtlColor(pDC, pWnd, nCtlColor);
+
+	if (CTLCOLOR_STATIC == nCtlColor)
+	{
+		//pDC->SetBkMode(TRANSPARENT);
+		pDC->SetBkColor(ColorWhite);
+		return (HBRUSH)GetStockObject(NULL_BRUSH);
+	}
+	else if (CTLCOLOR_DLG == nCtlColor)
+	{
+		pDC->SetBkColor(ColorWhite);
+		return (HBRUSH)GetStockObject(NULL_BRUSH);
+	}
+	
+	return hbr;
+}
+
+void CDlgViewIoMap::OnTimer(UINT_PTR nIDEvent)
+{
+	if (nIDEvent == OnTimeIoMapId)
+	{
+		if (this->IsWindowVisible() != TRUE)
+			return;
+		// ---------------------------------------------------------------------------
+
+		for (int i = 0; i < MODULE_COUNT; i++)
+		{
+			if (CMgrDio::GetMgr()->GetEQType() == enumEQType_DFS)
+			{
+				InputList_DFS_AJIN nInput_DFSIdx = (InputList_DFS_AJIN)(i + (m_nSelectedEqpStageNo + m_nCurrentInputPageNo - 1) * MODULE_COUNT);
+				SetInputIo(nInput_DFSIdx);
+
+				OutputList_DFS_AJIN nOutput_DFSIdx = (OutputList_DFS_AJIN)(i + (m_nSelectedEqpStageNo * MODULE_COUNT));
+				SetOutputIo(nOutput_DFSIdx);
+			}
+			else if (CMgrDio::GetMgr()->GetEQType() == enumEQType_Formation)
+			{
+				InputList_Hanwha_AJIN nInput_HanwhaIdx = (InputList_Hanwha_AJIN)(i + (m_nSelectedEqpStageNo + m_nCurrentInputPageNo - 1) * MODULE_COUNT);
+				SetInputIo(nInput_HanwhaIdx);
+				OutputList_Hanwha_AJIN nOutput_HanwhaIdx = (OutputList_Hanwha_AJIN)(i + (m_nSelectedEqpStageNo * 96));
+				SetOutputIo(nOutput_HanwhaIdx);
+			}
+		}
+		// ---------------------------------------------------------------------------		
+	}
+	//__super::OnTimer(nIDEvent);
+	CDialogEx::OnTimer(nIDEvent);
+}
+
+void CDlgViewIoMap::OnClose()
+{
+	// TODO: 여기에 메시지 처리기 코드를 추가 및/또는 기본값을 호출합니다.
+
+	//__super::OnClose();
+	CDialogEx::OnClose();
+}
+
+void CDlgViewIoMap::OnDestroy()
+{
+	//__super::OnDestroy();
+	CDialogEx::OnDestroy();
+
+
+	// TODO: 여기에 메시지 처리기 코드를 추가합니다.
+}
+
+// -------------------------------------------------------------------------------------------------
+
+//BOOL CDlgViewIoMap::Create(LPCTSTR lpszTemplateName, CWnd* pParentWnd)
+//{
+//	// TODO: 여기에 특수화된 코드를 추가 및/또는 기본 클래스를 호출합니다.
+//
+//	return __super::Create(lpszTemplateName, pParentWnd);
+//}
+BOOL CDlgViewIoMap::Create(CWnd * pParentWnd)
+{
+	//return 0;
+	return CDialogEx::Create(IDD, pParentWnd);
+}
+
+BOOL CDlgViewIoMap::OnInitDialog()
+{
+	CDialogEx::OnInitDialog();
+
+	CenterWindow();
+
+	InitializeMemberVariables();
+
+	InitializeStatusControl();
+
+	return TRUE;  // return TRUE unless you set the focus to a control
+				  // 예외: OCX 속성 페이지는 FALSE를 반환해야 합니다.
+}
+
+BOOL CDlgViewIoMap::PreTranslateMessage(MSG* pMsg)
+{
+	// TODO: 여기에 특수화된 코드를 추가 및/또는 기본 클래스를 호출합니다.
+
+	return CDialogEx::PreTranslateMessage(pMsg);
+}
+
+void CDlgViewIoMap::InitializeMemberVariables()
+{
+	m_nCurrentInputPageNo = -1;
+	m_nCurrentOutputPageNo = -1;
+}
+
+bool CDlgViewIoMap::InitializeControls()
+{
+	// COMBO : SUBEQP_LIST
+	CMgrConfig* pMgrConfig = CMgrConfig::GetMgr();
+	m_cboSubEqpList.AddString(_T(pMgrConfig->GetSubEqpInfo().strSubEqpId));
+
+	m_nSubEqpIndexNo = 0;
+	m_cboSubEqpList.SetCurSel(m_nSubEqpIndexNo);
+
+	// COMBO : STAGE_LIST
+	m_cboEqpStageList.AddString(_T("STAGE - 1"));
+	m_cboEqpStageList.AddString(_T("STAGE - 2"));
+
+	m_nSelectedEqpStageNo = 0;
+	m_cboEqpStageList.SetCurSel(m_nSelectedEqpStageNo);
+
+	// ----------------------------------------------------------------------------
+	
+	CMgrDio* pMgrDio = CMgrDio::GetMgr();
+	int nTotalDioCount = CMgrConfig::GetMgr()->GetDioCount();
+
+	for (int dioCount = 0; dioCount < nTotalDioCount; dioCount++)
+	{
+		for (int channelCount = 0; channelCount < IO_VALUE_COUNT; channelCount++)
+		{
+			CString tempIoAddr = CMgrDio::GetMgr()->m_strIoName[dioCount][IO_ADDRESS][channelCount];
+			CString tempIoName = CMgrDio::GetMgr()->m_strIoName[dioCount][IO_NAME][channelCount];
+			//tempIoName += _T(" [OFF]");
+
+			// INPUT 첫봐면
+			int tmepNO = pMgrDio->GetSubEqpDioInfo(m_nSubEqpIndexNo).GetEqpStageDioInfo(0).m_nFirstInputDioNo;
+			if (dioCount == pMgrDio->GetSubEqpDioInfo(m_nSubEqpIndexNo).GetEqpStageDioInfo(0).m_nFirstInputDioNo - 1)		
+			{	
+		/*		GetDlgItem(IDC_STATIC_VIEW_IO_INFO_NAME_INPUT00 + channelCount)->SetWindowText(tempIoAddr);
+				GetDlgItem(IDC_STATIC_VIEW_IO_INFO_DESC_INPUT00 + channelCount)->SetWindowText(tempIoName);*/
+
+				m_InputIO_Address[channelCount].SetWindowText(tempIoAddr);
+				m_InputIO_Status[channelCount].SetWindowText(tempIoName);
+
+
+				GetDlgItem(IDC_BTN_VIEW_IO_MAP_INPUT_PREV)->EnableWindow(false);
+
+				m_nCurrentInputPageNo = 1;
+			}
+			// OUTPUT 첫화면
+			else if (dioCount == pMgrDio->GetSubEqpDioInfo(m_nSubEqpIndexNo).GetEqpStageDioInfo(0).m_nFirstOutputDioNo - 1)
+			{	/*
+				GetDlgItem(IDC_STATIC_VIEW_IO_INFO_NAME_OUTPUT00 + channelCount)->SetWindowText(tempIoAddr);
+				GetDlgItem(IDC_BTN_VIEW_IO_INFO_ACT_OUTPUT00 + channelCount)->SetWindowText(tempIoName);
+*/
+				m_OuputIO_Address[channelCount].SetWindowText(tempIoAddr);
+				m_OutPutIO_Status[channelCount].SetWindowText(tempIoName);
+
+				GetDlgItem(IDC_BTN_VIEW_IO_MAP_OUTPUT_PREV)->EnableWindow(false);
+				GetDlgItem(IDC_BTN_VIEW_IO_MAP_OUTPUT_NEXT)->EnableWindow(false);
+
+				m_nCurrentOutputPageNo = 1;
+			}
+		}
+	}
+
+	return true;
+}
+
+void CDlgViewIoMap::InitializeStatusControl()
+{
+	for (int i = 0; i < IO_VALUE_COUNT; i++)
+	{
+		m_InputIO_Status[i].SetBkColor(COLOR_RED, COLOR_RED);
+		m_InputIO_Status[i].SetFont("Verdana", 11, 1200);
+		m_InputIO_Status[i].SetTextColor(ColorWhite);
+
+		m_OutPutIO_Status[i].SetShade(COLOR_RED, 8, 10, 62, COLOR_RED);
+		m_OutPutIO_Status[i].SetFont("Verdana", 11, 1200);
+		m_OutPutIO_Status[i].SetTextColor(ColorWhite);
+	}
+}
+
+// -------------------------------------------------------------------------------------------------
+
+void CDlgViewIoMap::OnBnClickedBtnViewIoMapClose()
+{
+	ShowWindow(SW_HIDE);
+}
+
+void CDlgViewIoMap::OnBnClickedBtnViewIoMapInputPrev()
+{
+	int nPrevPageNo = m_nCurrentInputPageNo - 1;
+	int nPrevDioIndexNo = CMgrDio::GetMgr()->GetSubEqpDioInfo(m_nSubEqpIndexNo).GetEqpStageDioInfo(m_nSelectedEqpStageNo).GetInputPageDioNo(nPrevPageNo);
+
+	LoadInputDioInfo(nPrevDioIndexNo);
+
+	SetInputPageButton(nPrevPageNo, _T("PREV"));
+	m_nCurrentInputPageNo = nPrevPageNo;
+}
+
+void CDlgViewIoMap::OnBnClickedBtnViewIoMapInputNext()
+{
+	int nNextPageNo = m_nCurrentInputPageNo + 1;
+	int nNextDioIndexNo = CMgrDio::GetMgr()->GetSubEqpDioInfo(m_nSubEqpIndexNo).GetEqpStageDioInfo(m_nSelectedEqpStageNo).GetInputPageDioNo(nNextPageNo);
+	LoadInputDioInfo(nNextDioIndexNo);
+
+	SetInputPageButton(nNextPageNo, _T("NEXT"));
+	m_nCurrentInputPageNo = nNextPageNo;
+}
+
+void CDlgViewIoMap::OnBnClickedBtnViewIoMapOutputPrev()
+{
+	int nPrevPageNo = m_nCurrentOutputPageNo - 1;
+	int nPrevDioIndexNo = CMgrDio::GetMgr()->GetSubEqpDioInfo(m_nSubEqpIndexNo).GetEqpStageDioInfo(m_nSelectedEqpStageNo).GetOutputPageDioNo(nPrevPageNo);
+	LoadOutputDioInfo(nPrevDioIndexNo);
+
+	SetOutputPageButton(nPrevPageNo, _T("PREV"));
+	m_nCurrentOutputPageNo = nPrevPageNo;
+}
+
+void CDlgViewIoMap::OnBnClickedBtnViewIoMapOutputNext()
+{
+	int nNextPageNo = m_nCurrentOutputPageNo + 1;
+	int nDioIndexNo = CMgrDio::GetMgr()->GetSubEqpDioInfo(m_nSubEqpIndexNo).GetEqpStageDioInfo(m_nSelectedEqpStageNo).GetOutputPageDioNo(nNextPageNo);
+	LoadOutputDioInfo(nDioIndexNo);
+
+	SetOutputPageButton(nNextPageNo, _T("NEXT"));
+	m_nCurrentOutputPageNo = nNextPageNo;
+}
+
+void CDlgViewIoMap::OnOutputClickCommand(UINT nID)
+{
+	int nOutputIndex = nID - IDC_BTN_VIEW_IO_INFO_ACT_OUTPUT00;
+	nOutputIndex = (m_nSelectedEqpStageNo * 96) + nOutputIndex;
+	//CString tempIoAddr = CMgrDio::GetMgr()->m_strIoName[nOutputDioNo][IO_ADDRESS][nOutputIndex];
+	//CString tempIoName = CMgrDio::GetMgr()->m_strIoName[nOutputDioNo][IO_NAME][nOutputIndex];
+
+	// ----------------------------------------------------------------------------
+	bool bInit = CMgrDio::GetMgr()->GetAjinIoControl()->IsInitializeLibrary();
+	if (!bInit)
+	{
+		return;
+	}
+
+	bool currentValue = CMgrDio::GetMgr()->GetAjinIoControl()->m_bOutputIo_Hanwha[nOutputIndex];
+	CMgrDio::GetMgr()->SetAjinOutputData(nOutputIndex, !currentValue);
+}
+
+void CDlgViewIoMap::OnCbnSelchangeCboViewIoMapSubeqpid()
+{
+	//CString sSectedValue;
+	//m_cboSubEqpList.GetLBText(m_nSubEqpIndexNo, sSectedValue);
+	m_nSubEqpIndexNo = m_cboSubEqpList.GetCurSel();
+
+	m_nSelectedEqpStageNo = 0;
+	m_cboEqpStageList.SetCurSel(m_nSelectedEqpStageNo);
+
+	LoadAllDioInfo(m_nSubEqpIndexNo, m_nSelectedEqpStageNo);
+}
+
+void CDlgViewIoMap::OnCbnSelchangeCboViewIoMapStageid()
+{
+	m_nSubEqpIndexNo = m_cboSubEqpList.GetCurSel();
+	m_nSelectedEqpStageNo = m_cboEqpStageList.GetCurSel();
+
+	LoadAllDioInfo(m_nSubEqpIndexNo, m_nSelectedEqpStageNo);
+}
+
+// -------------------------------------------------------------------------------------------------
+
+bool CDlgViewIoMap::LoadAllDioInfo(int nSubEqpIndexNo, int nSelectedEqpStageNo)
+{
+	CMgrDio* pMgrDio = CMgrDio::GetMgr();
+
+	// INTPUT
+	int nInputDioNo = pMgrDio->GetSubEqpDioInfo(nSubEqpIndexNo).GetEqpStageDioInfo(nSelectedEqpStageNo).m_nFirstInputDioNo;
+	m_nCurrentInputPageNo = pMgrDio->GetSubEqpDioInfo(nSubEqpIndexNo).GetEqpStageDioInfo(nSelectedEqpStageNo).GetInputPageNo(nInputDioNo - 1);
+	LoadInputDioInfo(nInputDioNo - 1);
+
+	GetDlgItem(IDC_BTN_VIEW_IO_MAP_INPUT_PREV)->EnableWindow(false);
+	GetDlgItem(IDC_BTN_VIEW_IO_MAP_INPUT_NEXT)->EnableWindow(true);
+	
+
+	// OUTPUT
+	int nOutputDioNo = pMgrDio->GetSubEqpDioInfo(nSubEqpIndexNo).GetEqpStageDioInfo(nSelectedEqpStageNo).m_nFirstOutputDioNo;
+	m_nCurrentOutputPageNo = pMgrDio->GetSubEqpDioInfo(nSubEqpIndexNo).GetEqpStageDioInfo(nSelectedEqpStageNo).GetOutputPageNo(nOutputDioNo - 1);
+	LoadOutputDioInfo(nOutputDioNo - 1);
+
+	GetDlgItem(IDC_BTN_VIEW_IO_MAP_OUTPUT_PREV)->EnableWindow(false);
+	GetDlgItem(IDC_BTN_VIEW_IO_MAP_OUTPUT_NEXT)->EnableWindow(false);
+	
+	return true;
+}
+
+bool CDlgViewIoMap::LoadInputDioInfo(int nDioIndexNo)
+{
+	for (int channelCount = 0; channelCount < IO_VALUE_COUNT; channelCount++)
+	{
+		CString tempIoAddr = CMgrDio::GetMgr()->m_strIoName[nDioIndexNo][IO_ADDRESS][channelCount];
+		CString tempIoName = CMgrDio::GetMgr()->m_strIoName[nDioIndexNo][IO_NAME][channelCount];
+		//tempIoName += _T(" [OFF]");
+
+		//GetDlgItem(IDC_STATIC_VIEW_IO_INFO_NAME_INPUT00 + channelCount)->SetWindowText(tempIoAddr);
+		//GetDlgItem(IDC_STATIC_VIEW_IO_INFO_DESC_INPUT00 + channelCount)->SetWindowText(tempIoName);
+
+		m_InputIO_Address[channelCount].SetWindowText(tempIoAddr);
+		m_InputIO_Status[channelCount].SetWindowText(tempIoName);
+
+	}
+
+	return true;
+}
+
+bool CDlgViewIoMap::LoadOutputDioInfo(int nDioIndexNo)
+{
+	for (int channelCount = 0; channelCount < IO_VALUE_COUNT; channelCount++)
+	{
+		CString tempIoAddr = CMgrDio::GetMgr()->m_strIoName[nDioIndexNo][IO_ADDRESS][channelCount];
+		CString tempIoName = CMgrDio::GetMgr()->m_strIoName[nDioIndexNo][IO_NAME][channelCount];
+		//tempIoName += _T(" [OFF]");
+/*
+		GetDlgItem(IDC_STATIC_VIEW_IO_INFO_NAME_OUTPUT00 + channelCount)->SetWindowText(tempIoAddr);
+		GetDlgItem(IDC_BTN_VIEW_IO_INFO_ACT_OUTPUT00 + channelCount)->SetWindowText(tempIoName);
+*/
+
+		m_OuputIO_Address[channelCount].SetWindowText(tempIoAddr);
+		m_OutPutIO_Status[channelCount].SetWindowText(tempIoName);
+	}
+
+	return true;
+}
+
+bool CDlgViewIoMap::SetInputPageButton(int nDioPageNo, CString strDirection)
+{
+	CMgrDio* pMgrDio = CMgrDio::GetMgr();
+
+	if (strDirection.CompareNoCase(_T("PREV")) == 0)
+	{
+		int tempFirstInputDioNo = pMgrDio->GetSubEqpDioInfo(m_nSubEqpIndexNo).GetEqpStageDioInfo(m_nSelectedEqpStageNo).m_nFirstInputDioNo;
+		int tempFirstInputPageNo = pMgrDio->GetSubEqpDioInfo(m_nSubEqpIndexNo).GetEqpStageDioInfo(m_nSelectedEqpStageNo).GetInputPageNo(tempFirstInputDioNo - 1);
+		if (nDioPageNo == tempFirstInputPageNo)
+		{
+			GetDlgItem(IDC_BTN_VIEW_IO_MAP_INPUT_PREV)->EnableWindow(false);
+			GetDlgItem(IDC_BTN_VIEW_IO_MAP_INPUT_NEXT)->EnableWindow(true);
+		}
+		else
+		{
+			GetDlgItem(IDC_BTN_VIEW_IO_MAP_INPUT_PREV)->EnableWindow(true);
+			GetDlgItem(IDC_BTN_VIEW_IO_MAP_INPUT_NEXT)->EnableWindow(true);
+		}
+	}
+	else if (strDirection.CompareNoCase(_T("NEXT")) == 0)
+	{
+		int tempLastInputDioNo = pMgrDio->GetSubEqpDioInfo(m_nSubEqpIndexNo).GetEqpStageDioInfo(m_nSelectedEqpStageNo).m_nLastInputDioNo;
+		int tempLastInputPageNo = pMgrDio->GetSubEqpDioInfo(m_nSubEqpIndexNo).GetEqpStageDioInfo(m_nSelectedEqpStageNo).GetInputPageNo(tempLastInputDioNo - 1);
+		if (nDioPageNo == tempLastInputPageNo)
+		{
+			GetDlgItem(IDC_BTN_VIEW_IO_MAP_INPUT_PREV)->EnableWindow(true);
+			GetDlgItem(IDC_BTN_VIEW_IO_MAP_INPUT_NEXT)->EnableWindow(false);
+		}
+		else
+		{
+			GetDlgItem(IDC_BTN_VIEW_IO_MAP_INPUT_PREV)->EnableWindow(true);
+			GetDlgItem(IDC_BTN_VIEW_IO_MAP_INPUT_NEXT)->EnableWindow(true);
+		}
+	}
+
+	return true;
+}
+
+bool CDlgViewIoMap::SetOutputPageButton(int nDioPageNo, CString strDirection)
+{
+	if (strDirection.CompareNoCase(_T("PREV")) == 0)
+	{
+		if (nDioPageNo == CMgrDio::GetMgr()->GetSubEqpDioInfo(m_nSubEqpIndexNo).GetEqpStageDioInfo(m_nSelectedEqpStageNo).m_nFirstOutputDioNo)
+		{
+			GetDlgItem(IDC_BTN_VIEW_IO_MAP_OUTPUT_PREV)->EnableWindow(false);
+			GetDlgItem(IDC_BTN_VIEW_IO_MAP_OUTPUT_NEXT)->EnableWindow(true);
+		}
+		else
+		{
+			GetDlgItem(IDC_BTN_VIEW_IO_MAP_OUTPUT_PREV)->EnableWindow(true);
+			GetDlgItem(IDC_BTN_VIEW_IO_MAP_OUTPUT_NEXT)->EnableWindow(true);
+		}
+	}
+	else if (strDirection.CompareNoCase(_T("NEXT")) == 0)
+	{
+		if (nDioPageNo == CMgrDio::GetMgr()->GetSubEqpDioInfo(m_nSubEqpIndexNo).GetEqpStageDioInfo(m_nSelectedEqpStageNo).m_nLastOutputDioNo)
+		{
+			GetDlgItem(IDC_BTN_VIEW_IO_MAP_OUTPUT_PREV)->EnableWindow(true);
+			GetDlgItem(IDC_BTN_VIEW_IO_MAP_OUTPUT_NEXT)->EnableWindow(false);
+		}
+		else
+		{
+			GetDlgItem(IDC_BTN_VIEW_IO_MAP_OUTPUT_PREV)->EnableWindow(true);
+			GetDlgItem(IDC_BTN_VIEW_IO_MAP_OUTPUT_NEXT)->EnableWindow(true);
+		}
+	}
+
+	return true;
+}
+
+// -----------------------------------------------------------------------------
+
+/**
+ * .
+ * 
+ * METHOD_NAME : SetInputIo
+ * METHOD_TYPE : -
+ * DESCRIPTION : 
+ * \return 
+ */
+bool CDlgViewIoMap::SetInputIo(int nIndex)
+{
+	bool bInit = CMgrDio::GetMgr()->GetAjinIoControl()->IsInitializeLibrary();
+	if (!bInit)
+	{
+		return false;
+	}
+
+	bool setValue = CMgrDio::GetMgr()->GetAjinInputData(nIndex);
+
+	nIndex = nIndex % MODULE_COUNT;
+
+	if (setValue == TRUE)
+	{
+		m_InputIO_Status[nIndex].SetBkColor(COLOR_GREEN, COLOR_GREEN);
+		m_InputIO_Status[nIndex].SetFont("Verdana", 11, 1200);
+		m_InputIO_Status[nIndex].SetTextColor(ColorWhite);
+	}
+	else
+	{
+		m_InputIO_Status[nIndex].SetBkColor(COLOR_RED, COLOR_RED);
+		m_InputIO_Status[nIndex].SetFont("Verdana", 11, 1200);
+		m_InputIO_Status[nIndex].SetTextColor(ColorWhite);
+	}
+	m_InputIO_Status[nIndex].Invalidate(false);
+
+	return TRUE;
+}
+
+/**
+ * .
+ * 
+ * METHOD_NAME : SetOutputIo
+ * METHOD_TYPE : -
+ * DESCRIPTION : 
+ * \return 
+ */
+bool CDlgViewIoMap::SetOutputIo(int nIndex)
+{
+	bool bInit = CMgrDio::GetMgr()->GetAjinIoControl()->IsInitializeLibrary();
+	if (!bInit)
+	{
+		return false;
+	}
+
+	bool setValue = CMgrDio::GetMgr()->GetAjinOutputData(nIndex);
+
+	nIndex = nIndex % 96;
+
+	//CString tempIoName = CMgrDio::GetMgr()->m_strIoName[m_nCurrentOutputPageNo][IO_NAME][nIndex];
+	if (setValue == TRUE)
+	{
+		m_OutPutIO_Status[nIndex].SetShade(COLOR_GREEN, 8, 10, 62, COLOR_GREEN);
+		m_OutPutIO_Status[nIndex].SetFont("Verdana", 11, 1200);
+		m_OutPutIO_Status[nIndex].SetTextColor(ColorBlack);
+		
+	}
+	else
+	{
+		m_OutPutIO_Status[nIndex].SetShade(COLOR_RED , 8, 10, 62, COLOR_RED);
+		m_OutPutIO_Status[nIndex].SetFont("Verdana", 11, 1200);
+		m_OutPutIO_Status[nIndex].SetTextColor(ColorWhite);
+	}
+	m_OutPutIO_Status[nIndex].Invalidate(false);	
+	return TRUE;
+}
+
+
+
+
+
+ void CDlgViewIoMap::OnBnClickedBtnViewIoInfoActOutput00()
+ {
+	 // TODO: 여기에 컨트롤 알림 처리기 코드를 추가합니다.
+ }

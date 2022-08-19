@@ -1,0 +1,1230 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<Project ToolsVersion="4.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <ItemGroup>
+    <Filter Include="소스 파일">
+      <UniqueIdentifier>{4FC737F1-C7A5-4376-A066-2A32D752A2FF}</UniqueIdentifier>
+      <Extensions>cpp;c;cc;cxx;def;odl;idl;hpj;bat;asm;asmx</Extensions>
+    </Filter>
+    <Filter Include="헤더 파일">
+      <UniqueIdentifier>{93995380-89BD-4b04-88EB-625FBE52EBFB}</UniqueIdentifier>
+      <Extensions>h;hh;hpp;hxx;hm;inl;inc;xsd</Extensions>
+    </Filter>
+    <Filter Include="리소스 파일">
+      <UniqueIdentifier>{67DA6AB6-F800-4c08-8B7A-83BB121AAD01}</UniqueIdentifier>
+      <Extensions>rc;ico;cur;bmp;dlg;rc2;rct;bin;rgs;gif;jpg;jpeg;jpe;resx;tiff;tif;png;wav;mfcribbon-ms</Extensions>
+    </Filter>
+    <Filter Include="Serial">
+      <UniqueIdentifier>{08dd2bd8-08cb-4629-b0c9-ffd263f46a65}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Ethernet">
+      <UniqueIdentifier>{458399b4-33bf-4280-886e-cf5881f46047}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Dialog">
+      <UniqueIdentifier>{421e4743-c43a-4b7a-aeda-bbfdb360aab0}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Ctrl">
+      <UniqueIdentifier>{4d397a53-3c51-49c1-99ea-ea5f81a81d0b}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="DAQ">
+      <UniqueIdentifier>{5c8fbb18-22b9-42dc-bbcc-1b3b3cb8001b}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="신규작업">
+      <UniqueIdentifier>{c72cd777-515a-4d4a-b589-dbd6038f6300}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Manager">
+      <UniqueIdentifier>{7507fc98-d744-4d55-93ca-a5bff12aa2ca}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="GridCtrl">
+      <UniqueIdentifier>{b5cae728-5f93-4231-af6f-c0f351783a95}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="GridCells">
+      <UniqueIdentifier>{ae2eed72-b7c0-4a85-b83c-5ab40f1c621a}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="TotalSafetyCondition">
+      <UniqueIdentifier>{707873ae-be9b-4283-a843-5cc1d5fafc60}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="EtherCAT">
+      <UniqueIdentifier>{ca034fe3-ee6d-4bf3-94cb-e7cef8b4d515}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="FormationForm">
+      <UniqueIdentifier>{b9c156db-692b-4233-9c12-f5501f41bfb2}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="FormationForm\EQP">
+      <UniqueIdentifier>{6b70779c-61ea-40a8-87b6-bd9c81319c96}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Ctrl\XButton">
+      <UniqueIdentifier>{5af2fcb1-7a33-43e5-a0e4-43b8cd3f684d}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Ctrl\ShadeButton">
+      <UniqueIdentifier>{98e8d195-7a9b-4999-b693-99fa19b529b5}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Device">
+      <UniqueIdentifier>{d6309091-9d96-4ff9-a8c3-7ac33385e078}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Device\Calibrator">
+      <UniqueIdentifier>{2775a9e1-c91d-4355-97d4-fdce31364c1f}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Device\PID">
+      <UniqueIdentifier>{10a834a4-2004-46ab-8c32-a56241fb56b0}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Ethernet\Modbus">
+      <UniqueIdentifier>{eaacc63e-67af-44e4-a986-2f7e791b9bf1}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Device\DIO">
+      <UniqueIdentifier>{a8682b1f-7a5f-46d4-83fb-a19b8f0d6a4c}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Device\DIO\DioController">
+      <UniqueIdentifier>{3539a571-cbe3-489a-9997-37a8694191f0}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Device\DIO\DioController\AJIN">
+      <UniqueIdentifier>{15888f18-b6b7-422a-b7b4-1c8d7789f150}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Device\DIO\DioController\AJIN\Lib">
+      <UniqueIdentifier>{8d2cb8a3-8b9c-4e09-8e50-7248210d1aa2}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Device\DIO\DioProcess">
+      <UniqueIdentifier>{e6feaae7-02c0-4ac0-b365-12d8b5b6de1c}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Device\PID\PidProcess">
+      <UniqueIdentifier>{febe63d2-04e5-43c1-9ed9-af79c6bc25c8}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Device\BCR">
+      <UniqueIdentifier>{34811139-817c-4b44-9e62-17b8a9d33b75}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Device\CAN">
+      <UniqueIdentifier>{a87f97f8-e25e-451f-8e97-c11df5f0ef97}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Device\CAN\CanDevice">
+      <UniqueIdentifier>{3a210d21-5388-47ce-8e32-8c140c898d32}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Device\CAN\CanDevice\PCAN">
+      <UniqueIdentifier>{6185fdea-e9aa-456b-9413-3cdc1bd8f8eb}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Device\CAN\CanProcess">
+      <UniqueIdentifier>{76a8f2f2-cf0d-432a-a5e2-2eac5e9c0c95}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Device\Calibrator\CalibratorProcess">
+      <UniqueIdentifier>{1ef15a40-b8ef-425d-a016-e2a910606312}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Ethernet\Modbus\Advantech">
+      <UniqueIdentifier>{01481562-0ae3-4e41-848c-f80abf02f57c}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Ethernet\Modbus\Standard">
+      <UniqueIdentifier>{0e6c45a2-e17a-4492-a862-826089b27f03}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Device\Calibrator\CalibratorDevice">
+      <UniqueIdentifier>{51f1895e-e406-4cb4-9bfe-aa2138a9b601}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Device\Calibrator\CalibratorDevice\KeySight">
+      <UniqueIdentifier>{09d3dd4f-037d-4f84-b4c0-bab87e878065}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Device\PID\PidDevice">
+      <UniqueIdentifier>{6647d519-c84c-4844-868e-19917876a317}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Device\PID\PidDevice\Advantech">
+      <UniqueIdentifier>{ca0d4d6d-8fa6-4e8c-8992-024091395d82}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Device\PID\PidDevice\Standard">
+      <UniqueIdentifier>{53de421e-b5d9-4fcc-9358-74cb423c8b1b}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Ethernet\Socket">
+      <UniqueIdentifier>{ca79f856-e2ef-4239-b32f-5115fda723ea}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Device\PLC">
+      <UniqueIdentifier>{633cdb6a-e8c4-421e-a507-e2eae69d16f7}</UniqueIdentifier>
+    </Filter>
+  </ItemGroup>
+  <ItemGroup>
+    <Text Include="ReadMe.txt" />
+  </ItemGroup>
+  <ItemGroup>
+    <ClInclude Include="PnxCycler.h">
+      <Filter>헤더 파일</Filter>
+    </ClInclude>
+    <ClInclude Include="PnxCyclerDlg.h">
+      <Filter>헤더 파일</Filter>
+    </ClInclude>
+    <ClInclude Include="stdafx.h">
+      <Filter>헤더 파일</Filter>
+    </ClInclude>
+    <ClInclude Include="targetver.h">
+      <Filter>헤더 파일</Filter>
+    </ClInclude>
+    <ClInclude Include="Singleton.h">
+      <Filter>헤더 파일</Filter>
+    </ClInclude>
+    <ClInclude Include="Cycle.h">
+      <Filter>헤더 파일</Filter>
+    </ClInclude>
+    <ClInclude Include="Step.h">
+      <Filter>헤더 파일</Filter>
+    </ClInclude>
+    <ClInclude Include="Pattern.h">
+      <Filter>헤더 파일</Filter>
+    </ClInclude>
+    <ClInclude Include="PnxUtil.h">
+      <Filter>헤더 파일</Filter>
+    </ClInclude>
+    <ClInclude Include="Channel.h">
+      <Filter>헤더 파일</Filter>
+    </ClInclude>
+    <ClInclude Include="Alarm.h">
+      <Filter>헤더 파일</Filter>
+    </ClInclude>
+    <ClInclude Include="AlarmList.h">
+      <Filter>헤더 파일</Filter>
+    </ClInclude>
+    <ClInclude Include="AlarmMap.h">
+      <Filter>헤더 파일</Filter>
+    </ClInclude>
+    <ClInclude Include="CommData.h">
+      <Filter>헤더 파일</Filter>
+    </ClInclude>
+    <ClInclude Include="SerialCom.h">
+      <Filter>Serial</Filter>
+    </ClInclude>
+    <ClInclude Include="SockProc.h">
+      <Filter>Ethernet</Filter>
+    </ClInclude>
+    <ClInclude Include="DlgViewAlarm.h">
+      <Filter>Dialog</Filter>
+    </ClInclude>
+    <ClInclude Include="MgrEthernet.h">
+      <Filter>Ethernet</Filter>
+    </ClInclude>
+    <ClInclude Include="MgrSerial.h">
+      <Filter>Serial</Filter>
+    </ClInclude>
+    <ClInclude Include="CommEthernet.h">
+      <Filter>Ethernet</Filter>
+    </ClInclude>
+    <ClInclude Include="ColorStaticST.h">
+      <Filter>Ctrl</Filter>
+    </ClInclude>
+    <ClInclude Include="GroupListCtrl.h">
+      <Filter>Ctrl</Filter>
+    </ClInclude>
+    <ClInclude Include="GroupListDefine.h">
+      <Filter>Ctrl</Filter>
+    </ClInclude>
+    <ClInclude Include="DefTreeCtrl.h">
+      <Filter>Ctrl</Filter>
+    </ClInclude>
+    <ClInclude Include="version.h">
+      <Filter>Ctrl</Filter>
+    </ClInclude>
+    <ClInclude Include="TinyXml\TiXmlHelper.h">
+      <Filter>Ctrl</Filter>
+    </ClInclude>
+    <ClInclude Include="TinyXml\tinyxml.h">
+      <Filter>Ctrl</Filter>
+    </ClInclude>
+    <ClInclude Include="TinyXml\tinystr.h">
+      <Filter>Ctrl</Filter>
+    </ClInclude>
+    <ClInclude Include="SkinTreeCtrl.h">
+      <Filter>Ctrl</Filter>
+    </ClInclude>
+    <ClInclude Include="SkinMemDC.h">
+      <Filter>Ctrl</Filter>
+    </ClInclude>
+    <ClInclude Include="SkinButton.h">
+      <Filter>Ctrl</Filter>
+    </ClInclude>
+    <ClInclude Include="MgrDAQ.h">
+      <Filter>DAQ</Filter>
+    </ClInclude>
+    <ClInclude Include="DAQ.h">
+      <Filter>DAQ</Filter>
+    </ClInclude>
+    <ClInclude Include="DAQList.h">
+      <Filter>DAQ</Filter>
+    </ClInclude>
+    <ClInclude Include="ComProc.h">
+      <Filter>Serial</Filter>
+    </ClInclude>
+    <ClInclude Include="EthernetDefine.h">
+      <Filter>헤더 파일</Filter>
+    </ClInclude>
+    <ClInclude Include="QueuingSerial.h">
+      <Filter>Serial</Filter>
+    </ClInclude>
+    <ClInclude Include="ClientSocket.h">
+      <Filter>Ethernet</Filter>
+    </ClInclude>
+    <ClInclude Include="DlgViewChamberAlarm.h">
+      <Filter>Dialog</Filter>
+    </ClInclude>
+    <ClInclude Include="LogThread.h">
+      <Filter>헤더 파일</Filter>
+    </ClInclude>
+    <ClInclude Include="PnxProcdump.h">
+      <Filter>헤더 파일</Filter>
+    </ClInclude>
+    <ClInclude Include="TabCtrlEx.h">
+      <Filter>헤더 파일</Filter>
+    </ClInclude>
+    <ClInclude Include="CDlgEditScheduleInfo.h">
+      <Filter>신규작업</Filter>
+    </ClInclude>
+    <ClInclude Include="CDlgViewLogIn.h">
+      <Filter>신규작업</Filter>
+    </ClInclude>
+    <ClInclude Include="CDlgViewScheduleInfo.h">
+      <Filter>신규작업</Filter>
+    </ClInclude>
+    <ClInclude Include="CDlgViewSchedulelist.h">
+      <Filter>신규작업</Filter>
+    </ClInclude>
+    <ClInclude Include="CMgrModel.h">
+      <Filter>신규작업</Filter>
+    </ClInclude>
+    <ClInclude Include="CMgrAccount.h">
+      <Filter>신규작업</Filter>
+    </ClInclude>
+    <ClInclude Include="CDlgEditUser.h">
+      <Filter>신규작업</Filter>
+    </ClInclude>
+    <ClInclude Include="CDlgEditChannelView.h">
+      <Filter>신규작업</Filter>
+    </ClInclude>
+    <ClInclude Include="CMgrScheduleHistory.h">
+      <Filter>신규작업</Filter>
+    </ClInclude>
+    <ClInclude Include="MgrStatus.h">
+      <Filter>Manager</Filter>
+    </ClInclude>
+    <ClInclude Include="MgrAlarm.h">
+      <Filter>Manager</Filter>
+    </ClInclude>
+    <ClInclude Include="MgrChannel.h">
+      <Filter>Manager</Filter>
+    </ClInclude>
+    <ClInclude Include="MgrComm.h">
+      <Filter>Manager</Filter>
+    </ClInclude>
+    <ClInclude Include="MgrCommData.h">
+      <Filter>Manager</Filter>
+    </ClInclude>
+    <ClInclude Include="MgrConfig.h">
+      <Filter>Manager</Filter>
+    </ClInclude>
+    <ClInclude Include="MgrLog.h">
+      <Filter>Manager</Filter>
+    </ClInclude>
+    <ClInclude Include="MgrSchedule.h">
+      <Filter>Manager</Filter>
+    </ClInclude>
+    <ClInclude Include="CDlgNextPause.h">
+      <Filter>신규작업</Filter>
+    </ClInclude>
+    <ClInclude Include="CDlgNextComplete.h">
+      <Filter>신규작업</Filter>
+    </ClInclude>
+    <ClInclude Include="CDlgNextStep.h">
+      <Filter>신규작업</Filter>
+    </ClInclude>
+    <ClInclude Include="CDlgViewMaterial.h">
+      <Filter>신규작업</Filter>
+    </ClInclude>
+    <ClInclude Include="CMgrMaterial.h">
+      <Filter>신규작업</Filter>
+    </ClInclude>
+    <ClInclude Include="CDlgReserveCancel.h">
+      <Filter>신규작업</Filter>
+    </ClInclude>
+    <ClInclude Include="CDlgEditCycler.h">
+      <Filter>신규작업</Filter>
+    </ClInclude>
+    <ClInclude Include="DlgViewPattern.h">
+      <Filter>신규작업</Filter>
+    </ClInclude>
+    <ClInclude Include="DlgMainTitle.h">
+      <Filter>신규작업</Filter>
+    </ClInclude>
+    <ClInclude Include="DlgSystemSafety.h">
+      <Filter>신규작업</Filter>
+    </ClInclude>
+    <ClInclude Include="CDlgEditMultiSchedule.h">
+      <Filter>신규작업</Filter>
+    </ClInclude>
+    <ClInclude Include="DlgViewDAQ.h">
+      <Filter>신규작업</Filter>
+    </ClInclude>
+    <ClInclude Include="CDlgViewChamber.h">
+      <Filter>신규작업</Filter>
+    </ClInclude>
+    <ClInclude Include="CMgrChamber.h">
+      <Filter>신규작업</Filter>
+    </ClInclude>
+    <ClInclude Include="GroupListCtrlView.h">
+      <Filter>Ctrl</Filter>
+    </ClInclude>
+    <ClInclude Include="turby_define.h">
+      <Filter>헤더 파일</Filter>
+    </ClInclude>
+    <ClInclude Include="SysAlarm.h">
+      <Filter>헤더 파일</Filter>
+    </ClInclude>
+    <ClInclude Include="GridCtrl_src\CellRange.h">
+      <Filter>GridCtrl</Filter>
+    </ClInclude>
+    <ClInclude Include="GridCtrl_src\CGridMemDC.h">
+      <Filter>GridCtrl</Filter>
+    </ClInclude>
+    <ClInclude Include="GridCtrl_src\GridCell.h">
+      <Filter>GridCtrl</Filter>
+    </ClInclude>
+    <ClInclude Include="GridCtrl_src\GridCellBase.h">
+      <Filter>GridCtrl</Filter>
+    </ClInclude>
+    <ClInclude Include="GridCtrl_src\GridCtrl.h">
+      <Filter>GridCtrl</Filter>
+    </ClInclude>
+    <ClInclude Include="GridCtrl_src\GridDropTarget.h">
+      <Filter>GridCtrl</Filter>
+    </ClInclude>
+    <ClInclude Include="GridCtrl_src\InPlaceEdit.h">
+      <Filter>GridCtrl</Filter>
+    </ClInclude>
+    <ClInclude Include="GridCtrl_src\TitleTip.h">
+      <Filter>GridCtrl</Filter>
+    </ClInclude>
+    <ClInclude Include="NewCellTypes\GridCellCheck.h">
+      <Filter>GridCells</Filter>
+    </ClInclude>
+    <ClInclude Include="NewCellTypes\GridCellCombo.h">
+      <Filter>GridCells</Filter>
+    </ClInclude>
+    <ClInclude Include="NewCellTypes\GridCellDateTime.h">
+      <Filter>GridCells</Filter>
+    </ClInclude>
+    <ClInclude Include="NewCellTypes\GridCellNumeric.h">
+      <Filter>GridCells</Filter>
+    </ClInclude>
+    <ClInclude Include="NewCellTypes\GridURLCell.h">
+      <Filter>GridCells</Filter>
+    </ClInclude>
+    <ClInclude Include="DlgTotalSafetyCondition.h">
+      <Filter>TotalSafetyCondition</Filter>
+    </ClInclude>
+    <ClInclude Include="DlgAuth.h">
+      <Filter>TotalSafetyCondition</Filter>
+    </ClInclude>
+    <ClInclude Include="MgrSystemLog.h">
+      <Filter>신규작업</Filter>
+    </ClInclude>
+    <ClInclude Include="ComiEcatSdk_Api.h">
+      <Filter>EtherCAT</Filter>
+    </ClInclude>
+    <ClInclude Include="ComiEcatSdk_Def.h">
+      <Filter>EtherCAT</Filter>
+    </ClInclude>
+    <ClInclude Include="ComiEcatSdk_Err.h">
+      <Filter>EtherCAT</Filter>
+    </ClInclude>
+    <ClInclude Include="ComiEcatSdk_SysDef.h">
+      <Filter>EtherCAT</Filter>
+    </ClInclude>
+    <ClInclude Include="ComiSWEcatSdk_Api.h">
+      <Filter>EtherCAT</Filter>
+    </ClInclude>
+    <ClInclude Include="CircularQueue.h">
+      <Filter>헤더 파일</Filter>
+    </ClInclude>
+    <ClInclude Include="util.h">
+      <Filter>헤더 파일</Filter>
+    </ClInclude>
+    <ClInclude Include="AXA.h">
+      <Filter>Device\DIO\DioController\AJIN\Lib</Filter>
+    </ClInclude>
+    <ClInclude Include="AXC.h">
+      <Filter>Device\DIO\DioController\AJIN\Lib</Filter>
+    </ClInclude>
+    <ClInclude Include="AXD.h">
+      <Filter>Device\DIO\DioController\AJIN\Lib</Filter>
+    </ClInclude>
+    <ClInclude Include="AXDev.h">
+      <Filter>Device\DIO\DioController\AJIN\Lib</Filter>
+    </ClInclude>
+    <ClInclude Include="AXHD.h">
+      <Filter>Device\DIO\DioController\AJIN\Lib</Filter>
+    </ClInclude>
+    <ClInclude Include="AXHS.h">
+      <Filter>Device\DIO\DioController\AJIN\Lib</Filter>
+    </ClInclude>
+    <ClInclude Include="AXL.h">
+      <Filter>Device\DIO\DioController\AJIN\Lib</Filter>
+    </ClInclude>
+    <ClInclude Include="AXM.h">
+      <Filter>Device\DIO\DioController\AJIN\Lib</Filter>
+    </ClInclude>
+    <ClInclude Include="defineIO.h">
+      <Filter>Device\DIO\DioController\AJIN\Lib</Filter>
+    </ClInclude>
+    <ClInclude Include="MgrDio.h">
+      <Filter>Manager</Filter>
+    </ClInclude>
+    <ClInclude Include="CAjinIoControl.h">
+      <Filter>Device\DIO\DioController\AJIN</Filter>
+    </ClInclude>
+    <ClInclude Include="PnxFormationDlg.h">
+      <Filter>FormationForm</Filter>
+    </ClInclude>
+    <ClInclude Include="CDlgMainTitleFormation.h">
+      <Filter>FormationForm</Filter>
+    </ClInclude>
+    <ClInclude Include="CDlgViewEqpChannelStatus.h">
+      <Filter>FormationForm\EQP</Filter>
+    </ClInclude>
+    <ClInclude Include="CDlgViewEqpGroupStatus.h">
+      <Filter>FormationForm\EQP</Filter>
+    </ClInclude>
+    <ClInclude Include="CDlgViewIoMap.h">
+      <Filter>FormationForm</Filter>
+    </ClInclude>
+    <ClInclude Include="CDlgViewIoManual.h">
+      <Filter>FormationForm</Filter>
+    </ClInclude>
+    <ClInclude Include="CDlgViewEqpSystemStatus.h">
+      <Filter>FormationForm\EQP</Filter>
+    </ClInclude>
+    <ClInclude Include="OddButton.h">
+      <Filter>Ctrl\XButton</Filter>
+    </ClInclude>
+    <ClInclude Include="CreateGrayscaleIcon.h">
+      <Filter>Ctrl\XButton</Filter>
+    </ClInclude>
+    <ClInclude Include="CxStatic.h">
+      <Filter>Ctrl\XButton</Filter>
+    </ClInclude>
+    <ClInclude Include="MemDC.h">
+      <Filter>Ctrl\XButton</Filter>
+    </ClInclude>
+    <ClInclude Include="xShadeButton\xShadeButton.h">
+      <Filter>Ctrl\ShadeButton</Filter>
+    </ClInclude>
+    <ClInclude Include="CDlgViewEqpLog.h">
+      <Filter>FormationForm</Filter>
+    </ClInclude>
+    <ClInclude Include="Resource.h">
+      <Filter>헤더 파일</Filter>
+    </ClInclude>
+    <ClInclude Include="CDioProcessStage2Sequence.h">
+      <Filter>Device\DIO\DioProcess</Filter>
+    </ClInclude>
+    <ClInclude Include="CDioProcessStage1Sequence.h">
+      <Filter>Device\DIO\DioProcess</Filter>
+    </ClInclude>
+    <ClInclude Include="include\ADSDIO.h">
+      <Filter>Device\PID\PidDevice\Advantech</Filter>
+    </ClInclude>
+    <ClInclude Include="CDlgPauseOption.h">
+      <Filter>신규작업</Filter>
+    </ClInclude>
+    <ClInclude Include="CWorkLogger.h">
+      <Filter>신규작업</Filter>
+    </ClInclude>
+    <ClInclude Include="safequeue.h">
+      <Filter>Ethernet</Filter>
+    </ClInclude>
+    <ClInclude Include="ZebraBCRControl.h">
+      <Filter>Device\BCR</Filter>
+    </ClInclude>
+    <ClInclude Include="PCANBasicClass.h">
+      <Filter>Device\CAN\CanDevice\PCAN</Filter>
+    </ClInclude>
+    <ClInclude Include="PCANUser.h">
+      <Filter>Device\CAN\CanDevice\PCAN</Filter>
+    </ClInclude>
+    <ClInclude Include="MgrPCan.h">
+      <Filter>Device\CAN\CanProcess</Filter>
+    </ClInclude>
+    <ClInclude Include="PCanCom.h">
+      <Filter>Device\CAN\CanProcess</Filter>
+    </ClInclude>
+    <ClInclude Include="include\PCAN\PCANBasic.h">
+      <Filter>Device\CAN\CanDevice\PCAN</Filter>
+    </ClInclude>
+    <ClInclude Include="include\PCAN\ProtocolCan.h">
+      <Filter>Device\CAN\CanDevice\PCAN</Filter>
+    </ClInclude>
+    <ClInclude Include="include\visa.h">
+      <Filter>Device\Calibrator\CalibratorDevice\KeySight</Filter>
+    </ClInclude>
+    <ClInclude Include="include\visaext.h">
+      <Filter>Device\Calibrator\CalibratorDevice\KeySight</Filter>
+    </ClInclude>
+    <ClInclude Include="include\visatype.h">
+      <Filter>Device\Calibrator\CalibratorDevice\KeySight</Filter>
+    </ClInclude>
+    <ClInclude Include="include\vpptype.h">
+      <Filter>Device\Calibrator\CalibratorDevice\KeySight</Filter>
+    </ClInclude>
+    <ClInclude Include="CCalibratorChannelData.h">
+      <Filter>Device\Calibrator\CalibratorProcess</Filter>
+    </ClInclude>
+    <ClInclude Include="CCalibratorVisaProcess.h">
+      <Filter>Device\Calibrator\CalibratorProcess</Filter>
+    </ClInclude>
+    <ClInclude Include="CAdvantechModbus.h">
+      <Filter>Ethernet\Modbus\Advantech</Filter>
+    </ClInclude>
+    <ClInclude Include="CStandardModbus.h">
+      <Filter>Ethernet\Modbus\Standard</Filter>
+    </ClInclude>
+    <ClInclude Include="CInverterAlarm.h">
+      <Filter>헤더 파일</Filter>
+    </ClInclude>
+    <ClInclude Include="include\modbus.h">
+      <Filter>Device\PID\PidDevice\Standard</Filter>
+    </ClInclude>
+    <ClInclude Include="TcpManager.h">
+      <Filter>Ethernet\Socket</Filter>
+    </ClInclude>
+    <ClInclude Include="TcpSock.h">
+      <Filter>Ethernet\Socket</Filter>
+    </ClInclude>
+    <ClInclude Include="CPidModbus.h">
+      <Filter>헤더 파일</Filter>
+    </ClInclude>
+    <ClInclude Include="include\ADSMOD.h">
+      <Filter>Device\PID\PidDevice\Advantech</Filter>
+    </ClInclude>
+    <ClInclude Include="CCommPid.h">
+      <Filter>Device\PID\PidProcess</Filter>
+    </ClInclude>
+    <ClInclude Include="CMgrPid.h">
+      <Filter>Device\PID</Filter>
+    </ClInclude>
+    <ClInclude Include="CDlgViewPlc1.h">
+      <Filter>Device\PLC</Filter>
+    </ClInclude>
+    <ClInclude Include="CDlgViewPlc2.h">
+      <Filter>Device\PLC</Filter>
+    </ClInclude>
+    <ClInclude Include="CPlcProcessSequence1.h">
+      <Filter>Device\PLC</Filter>
+    </ClInclude>
+    <ClInclude Include="CPlcProcessSequence2.h">
+      <Filter>Device\PLC</Filter>
+    </ClInclude>
+    <ClInclude Include="include\PLC\ActDefine.h">
+      <Filter>Device\PLC</Filter>
+    </ClInclude>
+    <ClInclude Include="include\PLC\actutltype.h">
+      <Filter>Device\PLC</Filter>
+    </ClInclude>
+    <ClInclude Include="CDlgViewPlcManual.h">
+      <Filter>FormationForm</Filter>
+    </ClInclude>
+    <ClInclude Include="MgrPlcInterface.h">
+      <Filter>Device\PLC</Filter>
+    </ClInclude>
+    <ClInclude Include="PlcInterface.h">
+      <Filter>Device\PLC</Filter>
+    </ClInclude>
+    <ClInclude Include="AlarmInverter.h">
+      <Filter>헤더 파일</Filter>
+    </ClInclude>
+    <ClInclude Include="AlarmInverterList.h">
+      <Filter>헤더 파일</Filter>
+    </ClInclude>
+    <ClInclude Include="AlarmInverterMap.h">
+      <Filter>헤더 파일</Filter>
+    </ClInclude>
+    <ClInclude Include="CDlgViewProgramStatus.h">
+      <Filter>FormationForm</Filter>
+    </ClInclude>
+    <ClInclude Include="CDlgCompleteOption.h">
+      <Filter>FormationForm</Filter>
+    </ClInclude>
+    <ClInclude Include="CDlgCalibration.h">
+      <Filter>FormationForm</Filter>
+    </ClInclude>
+    <ClInclude Include="CDlgPogoPin.h">
+      <Filter>FormationForm</Filter>
+    </ClInclude>
+    <ClInclude Include="DlgViewChannelPack.h">
+      <Filter>Dialog</Filter>
+    </ClInclude>
+    <ClInclude Include="MgrOption.h">
+      <Filter>Manager</Filter>
+    </ClInclude>
+  </ItemGroup>
+  <ItemGroup>
+    <ClCompile Include="stdafx.cpp">
+      <Filter>소스 파일</Filter>
+    </ClCompile>
+    <ClCompile Include="Cycle.cpp">
+      <Filter>소스 파일</Filter>
+    </ClCompile>
+    <ClCompile Include="Step.cpp">
+      <Filter>소스 파일</Filter>
+    </ClCompile>
+    <ClCompile Include="Pattern.cpp">
+      <Filter>소스 파일</Filter>
+    </ClCompile>
+    <ClCompile Include="PnxUtil.cpp">
+      <Filter>소스 파일</Filter>
+    </ClCompile>
+    <ClCompile Include="Channel.cpp">
+      <Filter>소스 파일</Filter>
+    </ClCompile>
+    <ClCompile Include="Alarm.cpp">
+      <Filter>소스 파일</Filter>
+    </ClCompile>
+    <ClCompile Include="AlarmList.cpp">
+      <Filter>소스 파일</Filter>
+    </ClCompile>
+    <ClCompile Include="AlarmMap.cpp">
+      <Filter>소스 파일</Filter>
+    </ClCompile>
+    <ClCompile Include="CommData.cpp">
+      <Filter>소스 파일</Filter>
+    </ClCompile>
+    <ClCompile Include="SerialCom.cpp">
+      <Filter>Serial</Filter>
+    </ClCompile>
+    <ClCompile Include="SockProc.cpp">
+      <Filter>Ethernet</Filter>
+    </ClCompile>
+    <ClCompile Include="DlgViewAlarm.cpp">
+      <Filter>Dialog</Filter>
+    </ClCompile>
+    <ClCompile Include="MgrEthernet.cpp">
+      <Filter>Ethernet</Filter>
+    </ClCompile>
+    <ClCompile Include="MgrSerial.cpp">
+      <Filter>Serial</Filter>
+    </ClCompile>
+    <ClCompile Include="CommEthernet.cpp">
+      <Filter>Ethernet</Filter>
+    </ClCompile>
+    <ClCompile Include="ComProc.cpp">
+      <Filter>Serial</Filter>
+    </ClCompile>
+    <ClCompile Include="version.cpp">
+      <Filter>Ctrl</Filter>
+    </ClCompile>
+    <ClCompile Include="TinyXml\TiXmlHelper.cpp">
+      <Filter>Ctrl</Filter>
+    </ClCompile>
+    <ClCompile Include="TinyXml\tinyxmlparser.cpp">
+      <Filter>Ctrl</Filter>
+    </ClCompile>
+    <ClCompile Include="TinyXml\tinyxmlerror.cpp">
+      <Filter>Ctrl</Filter>
+    </ClCompile>
+    <ClCompile Include="TinyXml\tinyxml.cpp">
+      <Filter>Ctrl</Filter>
+    </ClCompile>
+    <ClCompile Include="TinyXml\tinystr.cpp">
+      <Filter>Ctrl</Filter>
+    </ClCompile>
+    <ClCompile Include="SkinTreeCtrl.cpp">
+      <Filter>Ctrl</Filter>
+    </ClCompile>
+    <ClCompile Include="SkinButton.cpp">
+      <Filter>Ctrl</Filter>
+    </ClCompile>
+    <ClCompile Include="GroupListCtrl.cpp">
+      <Filter>Ctrl</Filter>
+    </ClCompile>
+    <ClCompile Include="ColorStaticST.cpp">
+      <Filter>Ctrl</Filter>
+    </ClCompile>
+    <ClCompile Include="DAQ.cpp">
+      <Filter>DAQ</Filter>
+    </ClCompile>
+    <ClCompile Include="DAQList.cpp">
+      <Filter>DAQ</Filter>
+    </ClCompile>
+    <ClCompile Include="MgrDAQ.cpp">
+      <Filter>DAQ</Filter>
+    </ClCompile>
+    <ClCompile Include="QueuingSerial.cpp">
+      <Filter>Serial</Filter>
+    </ClCompile>
+    <ClCompile Include="ClientSocket.cpp">
+      <Filter>Ethernet</Filter>
+    </ClCompile>
+    <ClCompile Include="DlgViewChamberAlarm.cpp">
+      <Filter>Dialog</Filter>
+    </ClCompile>
+    <ClCompile Include="LogThread.cpp">
+      <Filter>소스 파일</Filter>
+    </ClCompile>
+    <ClCompile Include="CDlgEditScheduleInfo.cpp">
+      <Filter>신규작업</Filter>
+    </ClCompile>
+    <ClCompile Include="CDlgViewLogIn.cpp">
+      <Filter>신규작업</Filter>
+    </ClCompile>
+    <ClCompile Include="CDlgViewScheduleInfo.cpp">
+      <Filter>신규작업</Filter>
+    </ClCompile>
+    <ClCompile Include="CDlgViewSchedulelist.cpp">
+      <Filter>신규작업</Filter>
+    </ClCompile>
+    <ClCompile Include="CMgrAccount.cpp">
+      <Filter>신규작업</Filter>
+    </ClCompile>
+    <ClCompile Include="CMgrModel.cpp">
+      <Filter>신규작업</Filter>
+    </ClCompile>
+    <ClCompile Include="CDlgEditUser.cpp">
+      <Filter>신규작업</Filter>
+    </ClCompile>
+    <ClCompile Include="CDlgEditChannelView.cpp">
+      <Filter>신규작업</Filter>
+    </ClCompile>
+    <ClCompile Include="CMgrScheduleHistory.cpp">
+      <Filter>신규작업</Filter>
+    </ClCompile>
+    <ClCompile Include="MgrAlarm.cpp">
+      <Filter>Manager</Filter>
+    </ClCompile>
+    <ClCompile Include="MgrChannel.cpp">
+      <Filter>Manager</Filter>
+    </ClCompile>
+    <ClCompile Include="MgrComm.cpp">
+      <Filter>Manager</Filter>
+    </ClCompile>
+    <ClCompile Include="MgrCommData.cpp">
+      <Filter>Manager</Filter>
+    </ClCompile>
+    <ClCompile Include="MgrConfig.cpp">
+      <Filter>Manager</Filter>
+    </ClCompile>
+    <ClCompile Include="MgrLog.cpp">
+      <Filter>Manager</Filter>
+    </ClCompile>
+    <ClCompile Include="MgrSchedule.cpp">
+      <Filter>Manager</Filter>
+    </ClCompile>
+    <ClCompile Include="MgrStatus.cpp">
+      <Filter>Manager</Filter>
+    </ClCompile>
+    <ClCompile Include="TabCtrlEx.cpp">
+      <Filter>Ctrl</Filter>
+    </ClCompile>
+    <ClCompile Include="CDlgNextPause.cpp">
+      <Filter>신규작업</Filter>
+    </ClCompile>
+    <ClCompile Include="CDlgNextComplete.cpp">
+      <Filter>신규작업</Filter>
+    </ClCompile>
+    <ClCompile Include="CDlgNextStep.cpp">
+      <Filter>신규작업</Filter>
+    </ClCompile>
+    <ClCompile Include="CDlgViewMaterial.cpp">
+      <Filter>신규작업</Filter>
+    </ClCompile>
+    <ClCompile Include="CMgrMaterial.cpp">
+      <Filter>신규작업</Filter>
+    </ClCompile>
+    <ClCompile Include="CDlgReserveCancel.cpp">
+      <Filter>신규작업</Filter>
+    </ClCompile>
+    <ClCompile Include="CDlgEditCycler.cpp">
+      <Filter>신규작업</Filter>
+    </ClCompile>
+    <ClCompile Include="DlgViewPattern.cpp">
+      <Filter>신규작업</Filter>
+    </ClCompile>
+    <ClCompile Include="DlgMainTitle.cpp">
+      <Filter>신규작업</Filter>
+    </ClCompile>
+    <ClCompile Include="DlgSystemSafety.cpp">
+      <Filter>신규작업</Filter>
+    </ClCompile>
+    <ClCompile Include="CDlgEditMultiSchedule.cpp">
+      <Filter>신규작업</Filter>
+    </ClCompile>
+    <ClCompile Include="DlgViewDAQ.cpp">
+      <Filter>신규작업</Filter>
+    </ClCompile>
+    <ClCompile Include="CDlgViewChamber.cpp">
+      <Filter>신규작업</Filter>
+    </ClCompile>
+    <ClCompile Include="CMgrChamber.cpp">
+      <Filter>신규작업</Filter>
+    </ClCompile>
+    <ClCompile Include="GroupListCtrlView.cpp">
+      <Filter>Ctrl</Filter>
+    </ClCompile>
+    <ClCompile Include="SysAlarm.cpp">
+      <Filter>소스 파일</Filter>
+    </ClCompile>
+    <ClCompile Include="GridCtrl_src\GridCell.cpp">
+      <Filter>GridCtrl</Filter>
+    </ClCompile>
+    <ClCompile Include="GridCtrl_src\GridCellBase.cpp">
+      <Filter>GridCtrl</Filter>
+    </ClCompile>
+    <ClCompile Include="GridCtrl_src\GridCtrl.cpp">
+      <Filter>GridCtrl</Filter>
+    </ClCompile>
+    <ClCompile Include="GridCtrl_src\GridDropTarget.cpp">
+      <Filter>GridCtrl</Filter>
+    </ClCompile>
+    <ClCompile Include="GridCtrl_src\InPlaceEdit.cpp">
+      <Filter>GridCtrl</Filter>
+    </ClCompile>
+    <ClCompile Include="GridCtrl_src\TitleTip.cpp">
+      <Filter>GridCtrl</Filter>
+    </ClCompile>
+    <ClCompile Include="NewCellTypes\GridCellCheck.cpp">
+      <Filter>GridCells</Filter>
+    </ClCompile>
+    <ClCompile Include="NewCellTypes\GridCellCombo.cpp">
+      <Filter>GridCells</Filter>
+    </ClCompile>
+    <ClCompile Include="NewCellTypes\GridCellDateTime.cpp">
+      <Filter>GridCells</Filter>
+    </ClCompile>
+    <ClCompile Include="NewCellTypes\GridCellNumeric.cpp">
+      <Filter>GridCells</Filter>
+    </ClCompile>
+    <ClCompile Include="NewCellTypes\GridURLCell.cpp">
+      <Filter>GridCells</Filter>
+    </ClCompile>
+    <ClCompile Include="DlgTotalSafetyCondition.cpp">
+      <Filter>TotalSafetyCondition</Filter>
+    </ClCompile>
+    <ClCompile Include="DlgAuth.cpp">
+      <Filter>TotalSafetyCondition</Filter>
+    </ClCompile>
+    <ClCompile Include="MgrSystemLog.cpp">
+      <Filter>신규작업</Filter>
+    </ClCompile>
+    <ClCompile Include="PnxCycler.cpp">
+      <Filter>소스 파일</Filter>
+    </ClCompile>
+    <ClCompile Include="ComiEcatSdk_Loader.cpp">
+      <Filter>EtherCAT</Filter>
+    </ClCompile>
+    <ClCompile Include="ComiSWEcatSdk_Loader.cpp">
+      <Filter>EtherCAT</Filter>
+    </ClCompile>
+    <ClCompile Include="CircularQueue.cpp">
+      <Filter>소스 파일</Filter>
+    </ClCompile>
+    <ClCompile Include="MgrDio.cpp">
+      <Filter>Manager</Filter>
+    </ClCompile>
+    <ClCompile Include="CAjinIoControl.cpp">
+      <Filter>Device\DIO\DioController\AJIN</Filter>
+    </ClCompile>
+    <ClCompile Include="PnxCyclerDlg.cpp">
+      <Filter>소스 파일</Filter>
+    </ClCompile>
+    <ClCompile Include="PnxFormationDlg.cpp">
+      <Filter>FormationForm</Filter>
+    </ClCompile>
+    <ClCompile Include="CDlgMainTitleFormation.cpp">
+      <Filter>FormationForm</Filter>
+    </ClCompile>
+    <ClCompile Include="CDlgViewEqpChannelStatus.cpp">
+      <Filter>FormationForm\EQP</Filter>
+    </ClCompile>
+    <ClCompile Include="CDlgViewEqpGroupStatus.cpp">
+      <Filter>FormationForm\EQP</Filter>
+    </ClCompile>
+    <ClCompile Include="CDlgViewIoMap.cpp">
+      <Filter>FormationForm</Filter>
+    </ClCompile>
+    <ClCompile Include="CDlgViewEqpSystemStatus.cpp">
+      <Filter>FormationForm\EQP</Filter>
+    </ClCompile>
+    <ClCompile Include="CDlgViewIoManual.cpp">
+      <Filter>FormationForm</Filter>
+    </ClCompile>
+    <ClCompile Include="OddButton.cpp">
+      <Filter>Ctrl\XButton</Filter>
+    </ClCompile>
+    <ClCompile Include="CxStatic.cpp">
+      <Filter>Ctrl\XButton</Filter>
+    </ClCompile>
+    <ClCompile Include="xShadeButton\xShadeButton.cpp">
+      <Filter>Ctrl\ShadeButton</Filter>
+    </ClCompile>
+    <ClCompile Include="CDlgViewEqpLog.cpp">
+      <Filter>FormationForm</Filter>
+    </ClCompile>
+    <ClCompile Include="CDioProcessStage2Sequence.cpp">
+      <Filter>Device\DIO\DioProcess</Filter>
+    </ClCompile>
+    <ClCompile Include="CDioProcessStage1Sequence.cpp">
+      <Filter>Device\DIO\DioProcess</Filter>
+    </ClCompile>
+    <ClCompile Include="CDlgPauseOption.cpp">
+      <Filter>신규작업</Filter>
+    </ClCompile>
+    <ClCompile Include="CWorkLogger.cpp">
+      <Filter>신규작업</Filter>
+    </ClCompile>
+    <ClCompile Include="ZebraBCRControl.cpp">
+      <Filter>Device\BCR</Filter>
+    </ClCompile>
+    <ClCompile Include="PCANBasicClass.cpp">
+      <Filter>Device\CAN\CanDevice\PCAN</Filter>
+    </ClCompile>
+    <ClCompile Include="PCANUser.cpp">
+      <Filter>Device\CAN\CanDevice\PCAN</Filter>
+    </ClCompile>
+    <ClCompile Include="MgrPCan.cpp">
+      <Filter>Device\CAN\CanProcess</Filter>
+    </ClCompile>
+    <ClCompile Include="PCanCom.cpp">
+      <Filter>Device\CAN\CanProcess</Filter>
+    </ClCompile>
+    <ClCompile Include="CCalibratorChannelData.cpp">
+      <Filter>Device\Calibrator\CalibratorProcess</Filter>
+    </ClCompile>
+    <ClCompile Include="CCalibratorVisaProcess.cpp">
+      <Filter>Device\Calibrator\CalibratorProcess</Filter>
+    </ClCompile>
+    <ClCompile Include="CAdvantechModbus.cpp">
+      <Filter>Ethernet\Modbus\Advantech</Filter>
+    </ClCompile>
+    <ClCompile Include="CStandardModbus.cpp">
+      <Filter>Ethernet\Modbus\Standard</Filter>
+    </ClCompile>
+    <ClCompile Include="CInverterAlarm.cpp">
+      <Filter>소스 파일</Filter>
+    </ClCompile>
+    <ClCompile Include="TcpManager.cpp">
+      <Filter>Ethernet\Socket</Filter>
+    </ClCompile>
+    <ClCompile Include="TcpSock.cpp">
+      <Filter>Ethernet\Socket</Filter>
+    </ClCompile>
+    <ClCompile Include="CPidModbus.cpp">
+      <Filter>소스 파일</Filter>
+    </ClCompile>
+    <ClCompile Include="CCommPid.cpp">
+      <Filter>Device\PID\PidProcess</Filter>
+    </ClCompile>
+    <ClCompile Include="CMgrPid.cpp">
+      <Filter>Device\PID</Filter>
+    </ClCompile>
+    <ClCompile Include="CDlgViewPlc1.cpp">
+      <Filter>Device\PLC</Filter>
+    </ClCompile>
+    <ClCompile Include="CDlgViewPlc2.cpp">
+      <Filter>Device\PLC</Filter>
+    </ClCompile>
+    <ClCompile Include="CPlcProcessSequence1.cpp">
+      <Filter>Device\PLC</Filter>
+    </ClCompile>
+    <ClCompile Include="CPlcProcessSequence2.cpp">
+      <Filter>Device\PLC</Filter>
+    </ClCompile>
+    <ClCompile Include="include\PLC\actutltype.cpp">
+      <Filter>Device\PLC</Filter>
+    </ClCompile>
+    <ClCompile Include="CDlgViewPlcManual.cpp">
+      <Filter>FormationForm</Filter>
+    </ClCompile>
+    <ClCompile Include="MgrPlcInterface.cpp">
+      <Filter>Device\PLC</Filter>
+    </ClCompile>
+    <ClCompile Include="PlcInterface.cpp">
+      <Filter>Device\PLC</Filter>
+    </ClCompile>
+    <ClCompile Include="AlarmInverter.cpp">
+      <Filter>소스 파일</Filter>
+    </ClCompile>
+    <ClCompile Include="AlarmInverterList.cpp">
+      <Filter>소스 파일</Filter>
+    </ClCompile>
+    <ClCompile Include="AlarmInverterMap.cpp">
+      <Filter>소스 파일</Filter>
+    </ClCompile>
+    <ClCompile Include="CDlgCalibration.cpp">
+      <Filter>FormationForm</Filter>
+    </ClCompile>
+    <ClCompile Include="CDlgCompleteOption.cpp">
+      <Filter>FormationForm</Filter>
+    </ClCompile>
+    <ClCompile Include="CDlgPogoPin.cpp">
+      <Filter>FormationForm</Filter>
+    </ClCompile>
+    <ClCompile Include="CDlgViewProgramStatus.cpp">
+      <Filter>FormationForm</Filter>
+    </ClCompile>
+    <ClCompile Include="DlgViewChannelPack.cpp">
+      <Filter>Dialog</Filter>
+    </ClCompile>
+    <ClCompile Include="MgrOption.cpp">
+      <Filter>Manager</Filter>
+    </ClCompile>
+  </ItemGroup>
+  <ItemGroup>
+    <ResourceCompile Include="PnxCycler.rc">
+      <Filter>리소스 파일</Filter>
+    </ResourceCompile>
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="res\PnxCycler.rc2">
+      <Filter>리소스 파일</Filter>
+    </None>
+    <None Include="res\Safety.bmp">
+      <Filter>리소스 파일</Filter>
+    </None>
+  </ItemGroup>
+  <ItemGroup>
+    <Image Include="res\PnxCycler.ico">
+      <Filter>리소스 파일</Filter>
+    </Image>
+    <Image Include="res\Open.bmp">
+      <Filter>리소스 파일</Filter>
+    </Image>
+    <Image Include="res\test.ico">
+      <Filter>리소스 파일</Filter>
+    </Image>
+    <Image Include="res\New.bmp">
+      <Filter>리소스 파일</Filter>
+    </Image>
+    <Image Include="res\bitmap1.bmp">
+      <Filter>리소스 파일</Filter>
+    </Image>
+    <Image Include="res\Save.bmp">
+      <Filter>리소스 파일</Filter>
+    </Image>
+    <Image Include="res\Recent.bmp">
+      <Filter>리소스 파일</Filter>
+    </Image>
+    <Image Include="res\Exit.bmp">
+      <Filter>리소스 파일</Filter>
+    </Image>
+    <Image Include="res\Save.png">
+      <Filter>리소스 파일</Filter>
+    </Image>
+    <Image Include="res\SaveAs.bmp">
+      <Filter>리소스 파일</Filter>
+    </Image>
+    <Image Include="res\Cancel.bmp">
+      <Filter>리소스 파일</Filter>
+    </Image>
+    <Image Include="res\Cut.bmp">
+      <Filter>리소스 파일</Filter>
+    </Image>
+    <Image Include="res\Copy.bmp">
+      <Filter>리소스 파일</Filter>
+    </Image>
+    <Image Include="res\Paste.bmp">
+      <Filter>리소스 파일</Filter>
+    </Image>
+    <Image Include="res\PauseOp1.bmp">
+      <Filter>리소스 파일</Filter>
+    </Image>
+    <Image Include="res\PauseOp2.bmp">
+      <Filter>리소스 파일</Filter>
+    </Image>
+    <Image Include="res\PauseOp3.bmp">
+      <Filter>리소스 파일</Filter>
+    </Image>
+    <Image Include="res\CompleteOp1.bmp">
+      <Filter>리소스 파일</Filter>
+    </Image>
+    <Image Include="res\CompleteOp2.bmp">
+      <Filter>리소스 파일</Filter>
+    </Image>
+    <Image Include="res\CompleteOp3.bmp">
+      <Filter>리소스 파일</Filter>
+    </Image>
+    <Image Include="res\Start.bmp">
+      <Filter>리소스 파일</Filter>
+    </Image>
+    <Image Include="res\Pause.bmp">
+      <Filter>리소스 파일</Filter>
+    </Image>
+    <Image Include="res\Restart.bmp">
+      <Filter>리소스 파일</Filter>
+    </Image>
+    <Image Include="res\Next.bmp">
+      <Filter>리소스 파일</Filter>
+    </Image>
+    <Image Include="res\Complete.bmp">
+      <Filter>리소스 파일</Filter>
+    </Image>
+    <Image Include="res\AlarmReset.bmp">
+      <Filter>리소스 파일</Filter>
+    </Image>
+    <Image Include="res\BMS.bmp">
+      <Filter>리소스 파일</Filter>
+    </Image>
+    <Image Include="res\AutoCal.bmp">
+      <Filter>리소스 파일</Filter>
+    </Image>
+    <Image Include="res\save_as.bmp">
+      <Filter>리소스 파일</Filter>
+    </Image>
+    <Image Include="res\System.bmp">
+      <Filter>리소스 파일</Filter>
+    </Image>
+    <Image Include="res\DAQ.bmp">
+      <Filter>리소스 파일</Filter>
+    </Image>
+    <Image Include="res\Balance.bmp">
+      <Filter>리소스 파일</Filter>
+    </Image>
+    <Image Include="res\Log.bmp">
+      <Filter>리소스 파일</Filter>
+    </Image>
+    <Image Include="res\Alarm.bmp">
+      <Filter>리소스 파일</Filter>
+    </Image>
+    <Image Include="res\Pattern.bmp">
+      <Filter>리소스 파일</Filter>
+    </Image>
+    <Image Include="res\Red.bmp">
+      <Filter>리소스 파일</Filter>
+    </Image>
+    <Image Include="res\Yellow.bmp">
+      <Filter>리소스 파일</Filter>
+    </Image>
+    <Image Include="res\Green.bmp">
+      <Filter>리소스 파일</Filter>
+    </Image>
+    <Image Include="res\Ups.bmp">
+      <Filter>리소스 파일</Filter>
+    </Image>
+    <Image Include="res\PauseOp4.bmp">
+      <Filter>리소스 파일</Filter>
+    </Image>
+    <Image Include="res\CompleteOp4.bmp">
+      <Filter>리소스 파일</Filter>
+    </Image>
+    <Image Include="res\schedule.bmp">
+      <Filter>리소스 파일</Filter>
+    </Image>
+    <Image Include="res\Simple.bmp">
+      <Filter>리소스 파일</Filter>
+    </Image>
+    <Image Include="res\Detail.bmp">
+      <Filter>리소스 파일</Filter>
+    </Image>
+    <Image Include="res\Reserve.bmp">
+      <Filter>리소스 파일</Filter>
+    </Image>
+    <Image Include="res\Material.bmp">
+      <Filter>리소스 파일</Filter>
+    </Image>
+    <Image Include="res\NextOp1.bmp">
+      <Filter>리소스 파일</Filter>
+    </Image>
+    <Image Include="res\NextOp2.bmp">
+      <Filter>리소스 파일</Filter>
+    </Image>
+    <Image Include="..\..\..\0.bmp">
+      <Filter>리소스 파일</Filter>
+    </Image>
+    <Image Include="..\..\..\1.bmp">
+      <Filter>리소스 파일</Filter>
+    </Image>
+  </ItemGroup>
+</Project>

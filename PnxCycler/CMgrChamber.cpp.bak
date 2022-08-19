@@ -1,0 +1,134 @@
+#include "stdafx.h"
+#include "CMgrChamber.h"
+#include "MgrComm.h"
+#include "PnxUtil.h"
+
+#ifdef _DEBUG
+#define new DEBUG_NEW
+#undef THIS_FILE
+static char THIS_FILE[] = __FILE__;
+#endif
+
+CMgrChamber::CMgrChamber()
+{
+	LoadChamber();
+}
+
+CMgrChamber::~CMgrChamber()
+{
+	auto iter = m_vecDeviceChamber.begin();
+	auto iterE = m_vecDeviceChamber.end();
+
+	while (iter != iterE)
+	{
+		SChamber* lpDeviceChamber = (*iter);
+
+		if (lpDeviceChamber)
+		{
+			delete lpDeviceChamber;
+			lpDeviceChamber = nullptr;
+		}
+
+		++iter;
+	}
+
+	m_vecDeviceChamber.clear();
+}
+
+
+void	CMgrChamber::LoadChamber()
+{
+	CMgrComm* pMgr = CMgrComm::GetMgr();
+
+	if (!pMgr)
+		return;
+
+	std::vector<SDevice*> vecValue;
+	pMgr->GetDeivceFromType(eDeviceTypeChamber, vecValue);
+
+	auto iter = vecValue.begin();
+	auto iterE = vecValue.end();
+
+	while (iter != iterE) 
+	{
+		SDevice* lpDevice = (*iter);
+
+		if (lpDevice)
+		{
+			SChamber* lpDeviceChamber = new SChamber;
+
+			lpDeviceChamber->strName.Format("Chamber%d", lpDevice->nIndex + 1);
+
+			lpDeviceChamber->nStatus				= 0;
+			lpDeviceChamber->nNumber				= lpDevice->nIndex;
+			lpDeviceChamber->fCurrentValue			= lpDeviceChamber->fCurrentValue;
+			lpDeviceChamber->fSettingValue			= lpDeviceChamber->fSettingValue;
+			lpDeviceChamber->fManualSettingValue	= 30.0;
+			lpDeviceChamber->bChamberExec			= false;
+			//lpDeviceChamber->bSendOffCommand		= false;
+			//lpDeviceChamber->bSendOnCommand		= false;
+			//lpDeviceChamber->bSendChangeValue		= false;
+
+			for (int i = 0; i < lpDevice->arrChannel.GetSize(); ++i)
+			{
+				CString strCyclerChannelNumber = lpDevice->arrChannel.GetAt(i);
+
+				lpDeviceChamber->vecCyclerChannel.push_back(strCyclerChannelNumber);
+			}
+
+			m_vecDeviceChamber.push_back(lpDeviceChamber);
+		}
+
+		++iter;
+	}
+}
+
+SChamber*	CMgrChamber::GetDevice(int nChamberNumber)
+{
+	auto iter = m_vecDeviceChamber.begin();
+	auto iterE = m_vecDeviceChamber.end();
+
+	while (iter != iterE)
+	{
+		SChamber* lpDeviceChamber = (*iter);
+
+		if (lpDeviceChamber)
+		{
+			if (lpDeviceChamber->nNumber == nChamberNumber)
+				return lpDeviceChamber;
+		}
+
+		++iter;
+	}
+
+	return nullptr;
+}
+
+SChamber*	CMgrChamber::GetDeivceCyclerChannel(int nCyclerChannelNumber)
+{
+	auto iter = m_vecDeviceChamber.begin();
+	auto iterE = m_vecDeviceChamber.end();
+
+	while (iter != iterE)
+	{
+		SChamber* lpDeviceChamber = (*iter);
+
+		if (lpDeviceChamber)
+		{
+			auto it = lpDeviceChamber->vecCyclerChannel.begin();
+			auto itE = lpDeviceChamber->vecCyclerChannel.end();
+
+			while (it != itE)
+			{
+				if (nCyclerChannelNumber == atoi(*it))
+					return lpDeviceChamber;
+
+				++it;
+			}
+		}
+
+		++iter;
+	}
+
+	return nullptr;
+}

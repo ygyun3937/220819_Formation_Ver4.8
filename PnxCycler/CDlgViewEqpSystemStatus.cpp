@@ -1,0 +1,901 @@
+﻿// CDlgViewEqpSystemStatus.cpp: 구현 파일
+//
+
+//#include "pch.h"
+#include "stdafx.h"
+#include "PnxCycler.h"
+#include "CDlgViewEqpSystemStatus.h"
+#include "afxdialogex.h"
+#include "CMgrAccount.h"
+#include "DlgViewDAQ.h"
+#include "PnxUtil.h"
+#include "MgrDAQ.h"
+#include "MgrCommData.h"
+#include "MgrConfig.h"
+#include "DlgViewPattern.h"
+#include "NewCellTypes/GridURLCell.h"
+#include "NewCellTypes/GridCellCombo.h"
+#include "NewCellTypes/GridCellCheck.h"
+#include "NewCellTypes/GridCellNumeric.h"
+#include "NewCellTypes/GridCellDateTime.h"
+#include "MgrDio.h"
+#include "MgrStatus.h"
+#include "CMgrChamber.h"
+#include "MgrSerial.h"
+
+#define		TIMER_SET_1S			( 1000 )
+#define		Formation_ChamberTimerID (1029)
+
+// CDlgViewEqpSystemStatus 대화 상자
+
+IMPLEMENT_DYNAMIC(CDlgViewEqpSystemStatus, CDialogEx)
+
+CDlgViewEqpSystemStatus::CDlgViewEqpSystemStatus(CWnd* pParent /*=nullptr*/)
+	: CDialogEx(IDD_DLG_VIEW_EQP_SYSTEM_STATUS, pParent)
+{
+	m_strTrayPath = "";
+}
+
+CDlgViewEqpSystemStatus::~CDlgViewEqpSystemStatus()
+{
+}
+
+void CDlgViewEqpSystemStatus::DoDataExchange(CDataExchange* pDX)
+{
+	CDialogEx::DoDataExchange(pDX);
+
+	for (int i = 0; i <16; i++)
+	{
+		DDX_Control(pDX, IDC_STATUS_FANSTATUS1 + i, m_FanStatus[i]);
+
+	}
+
+	DDX_Control(pDX, IDC_STATUS_EMG_STATUS, m_EMGStatus);
+	for (int i = 0; i < 2; i++)
+	{
+		DDX_Control(pDX, IDC_STATUS_SMOKESTATUS1 + i, m_SmokeStatus[i]);
+	}
+	DDX_Control(pDX, IDC_GRID_DIRLIST, m_GridDirList);
+	DDX_Control(pDX, IDC_BUTTON_BARCODE_CHECK_OPTION, m_Btn_BarcodeOption);
+	DDX_Control(pDX, IDC_MONTHCALENDAR1, m_Select_Date);
+	DDX_Control(pDX, IDC_BUTTON_CONTACT_VOLT_APPLY, m_Btn_ContactVoltSetting);
+	DDX_Control(pDX, IDC_STATIC_FIND_TRAYBARCODE, m_Data_TrayBarcode);
+	DDX_Control(pDX, IDC_STATIC_FIND_CHBARCODE, m_Data_ChannelBarcode);
+	DDX_Control(pDX, IDC_BUTTON_LOG_FOLDER_SHOTCUTS, m_Btn_LogShortCut);
+}
+
+
+BEGIN_MESSAGE_MAP(CDlgViewEqpSystemStatus, CDialogEx)
+	ON_WM_SHOWWINDOW()
+	ON_WM_SIZE()
+	ON_WM_PAINT()
+	ON_WM_CTLCOLOR()
+	ON_WM_TIMER()
+	ON_WM_CLOSE()
+	ON_WM_DESTROY()
+	ON_WM_ERASEBKGND()
+	ON_BN_CLICKED(IDC_BUTTON_CONTACT_VOLT_APPLY, &CDlgViewEqpSystemStatus::OnBnClickedButtonContactVoltApply)
+	ON_BN_CLICKED(IDC_BUTTON_BARCODE_CHECK_OPTION, &CDlgViewEqpSystemStatus::OnBnClickedButtonBarcodeCheckOption)
+	ON_BN_CLICKED(IDC_BUTTON_LOG_FOLDER_SHOTCUTS, &CDlgViewEqpSystemStatus::OnBnClickedButtonLogFolderShotcuts)
+	ON_STN_CLICKED(IDC_STATIC_FIND_TRAYBARCODE, &CDlgViewEqpSystemStatus::OnStnClickedStaticFindTraybarcode)
+	ON_NOTIFY(GVN_SELCHANGED, IDC_GRID_DIRLIST, OnGridEndSelChange)
+	ON_STN_CLICKED(IDC_STATIC_FIND_CHBARCODE, &CDlgViewEqpSystemStatus::OnStnClickedStaticFindChbarcode)
+	ON_NOTIFY(MCN_SELCHANGE, IDC_MONTHCALENDAR1, &CDlgViewEqpSystemStatus::OnMcnSelchangeMonthcalendar1)
+END_MESSAGE_MAP()
+
+// -------------------------------------------------------------------------------------------------
+
+// CDlgViewEqpSystemStatus 메시지 처리기
+
+void CDlgViewEqpSystemStatus::OnShowWindow(BOOL bShow, UINT nStatus)
+{
+	CDialogEx::OnShowWindow(bShow, nStatus);
+	if (TRUE == bShow)
+	{
+	}
+	else
+	{
+
+	}
+}
+
+void CDlgViewEqpSystemStatus::OnSize(UINT nType, int cx, int cy)
+{
+	CDialogEx::OnSize(nType, cx, cy);
+
+	// TODO: 여기에 메시지 처리기 코드를 추가합니다.
+}
+
+void CDlgViewEqpSystemStatus::OnPaint()
+{
+	CPaintDC dc(this); // device context for painting
+
+}
+
+HBRUSH CDlgViewEqpSystemStatus::OnCtlColor(CDC* pDC, CWnd* pWnd, UINT nCtlColor)
+{
+	HBRUSH hbr = CDialogEx::OnCtlColor(pDC, pWnd, nCtlColor);
+
+	if (CTLCOLOR_STATIC == nCtlColor)
+	{
+		//pDC->SetBkMode(TRANSPARENT);
+		pDC->SetBkColor(ColorWhite);
+		return (HBRUSH)GetStockObject(NULL_BRUSH);
+	}
+	else if (CTLCOLOR_DLG == nCtlColor)
+	{
+		pDC->SetBkColor(ColorWhite);
+		return (HBRUSH)GetStockObject(NULL_BRUSH);
+	}
+
+	// TODO:  기본값이 적당하지 않으면 다른 브러시를 반환합니다.
+	return hbr;
+}
+
+BOOL CDlgViewEqpSystemStatus::OnEraseBkgnd(CDC* pDC)
+{
+	CRect rt;
+
+	pDC->GetClipBox(&rt);
+	pDC->FillSolidRect(&rt, ColorWhite);
+
+	return CDialogEx::OnEraseBkgnd(pDC);
+}
+
+void CDlgViewEqpSystemStatus::OnTimer(UINT_PTR nIDEvent)
+{
+	if (Formation_ChamberTimerID == nIDEvent)
+	{
+		LoadChamber();
+		Input_Status_Check();
+		bool bSubStage1Use = CMgrConfig::GetMgr()->GetSubEqpInfo().bStage1Use;
+		if (bSubStage1Use == true)
+		{
+			Update_Dir_list(0);
+		}
+		bool bSubStage2Use = CMgrConfig::GetMgr()->GetSubEqpInfo().bStage2Use;
+		if (bSubStage2Use == true)
+		{
+			Update_Dir_list(1);
+		}
+	}
+
+	CDialogEx::OnTimer(nIDEvent);
+}
+
+void CDlgViewEqpSystemStatus::OnClose()
+{
+	// TODO: 여기에 메시지 처리기 코드를 추가 및/또는 기본값을 호출합니다.
+
+	CDialogEx::OnClose();
+}
+
+void CDlgViewEqpSystemStatus::OnDestroy()
+{
+	CDialogEx::OnDestroy();
+
+	KillTimer(Formation_ChamberTimerID);
+}
+
+// -------------------------------------------------------------------------------------------------
+
+BOOL CDlgViewEqpSystemStatus::Create(CWnd * pParentWnd)
+{
+	return __super::Create(IDD, pParentWnd);
+}
+
+BOOL CDlgViewEqpSystemStatus::OnInitDialog()
+{
+	CDialogEx::OnInitDialog();
+	LoadDrawINI();
+
+	InitCtrl();
+
+	InitList_ChamberCtrl();
+
+	InitList_DirList();
+
+
+
+	CRect rect;
+	::SystemParametersInfo(SPI_GETWORKAREA, 0, &rect, 0);
+
+	SetTimer(Formation_ChamberTimerID, 100, NULL);
+	   	 
+	// TODO:  여기에 추가 초기화 작업을 추가합니다.
+	return TRUE;  // return TRUE unless you set the focus to a control
+				  // 예외: OCX 속성 페이지는 FALSE를 반환해야 합니다.
+}
+
+BOOL CDlgViewEqpSystemStatus::PreTranslateMessage(MSG* pMsg)
+{
+	if (WM_KEYDOWN == pMsg->message)
+	{
+		if (VK_RETURN == pMsg->wParam || VK_ESCAPE == pMsg->wParam)
+			return TRUE;
+	}
+
+	return __super::PreTranslateMessage(pMsg);
+}
+
+
+
+void CDlgViewEqpSystemStatus::InitCtrl()
+{	
+	for (int i = 0; i < 16; i++)
+	{
+		m_FanStatus[i].SetBkColor(COLOR_RED_200, COLOR_RED_200);
+		m_FanStatus[i].SetFont("Verdana", 11, 1200);
+		m_FanStatus[i].SetTextColor(ColorWhite);
+	}
+
+	m_EMGStatus.SetBkColor(COLOR_GREEN, COLOR_GREEN);
+	m_EMGStatus.SetFont("Verdana", 11, 1200);
+	m_EMGStatus.SetTextColor(ColorWhite);
+	m_EMGStatus.SetWindowText("OFF");
+
+	m_Data_TrayBarcode.SetBkColor(ColorWhite, ColorWhite);
+	m_Data_TrayBarcode.SetFont("Verdana", 12, 1200);
+	m_Data_TrayBarcode.SetTextColor(COLOR_BLACK);
+
+	m_Data_ChannelBarcode.SetBkColor(ColorWhite, ColorWhite);
+	m_Data_ChannelBarcode.SetFont("Verdana", 12, 1200);
+	m_Data_ChannelBarcode.SetTextColor(COLOR_BLACK);
+
+	for (int i = 0; i < 2; i++)
+	{
+		m_SmokeStatus[i].SetBkColor(COLOR_RED_200, COLOR_RED_200);
+		m_SmokeStatus[i].SetFont("Verdana", 11, 1200);
+		m_SmokeStatus[i].SetTextColor(ColorWhite);
+	}	
+
+	m_Btn_LogShortCut.SetShade(SHS_HARDBUMP, 8, 10, 62, COLOR_WAIT_BTN);
+	m_Btn_LogShortCut.SetFont("Verdana", 14, 1800);
+	m_Btn_LogShortCut.SetTextColor(COLOR_BLACK);
+
+	m_Btn_ContactVoltSetting.SetShade(SHS_HARDBUMP, 8, 10, 62, COLOR_WAIT_BTN);
+	m_Btn_ContactVoltSetting.SetFont("Verdana", 14, 1800);
+	m_Btn_ContactVoltSetting.SetTextColor(COLOR_BLACK);
+
+	m_Btn_BarcodeOption.SetShade(SHS_HARDBUMP, 8, 10, 62, COLOR_WAIT_BTN);
+	m_Btn_BarcodeOption.SetFont("Verdana", 14, 1800);
+	m_Btn_BarcodeOption.SetTextColor(COLOR_BLACK);
+}
+
+void CDlgViewEqpSystemStatus::LoadDrawINI()
+{
+	CStringArray strAry;
+	CString strFilePath; strFilePath.Empty();
+	CString strAppName; strAppName.Empty();
+
+	strFilePath.Format(_T("%s\\Config\\%s"), GetExePath(), _T("Draw.ini"));
+	strAppName.Format(_T("ViewDAQ"));
+
+	m_nGridRowSize = INIReadInt(strAppName, _T("ListCtrlRowSize"), strFilePath);
+
+	CPnxUtil::GetMgr()->SplitString(_T(INIReadStr(strAppName, _T("GridTitle"), strFilePath)), ',', m_strArrTitle);
+	CPnxUtil::GetMgr()->SplitString(_T(INIReadStr(strAppName, _T("GridTitleSize"), strFilePath)), ',', strAry);
+	for (int i = 0; i < strAry.GetSize(); ++i)
+		m_ArrTitleSize.Add(atoi(strAry.GetAt(i)));
+}
+
+void CDlgViewEqpSystemStatus::SetChannelNumber(int nChannelNumber)
+{
+	m_nChannelNumer = nChannelNumber;
+}
+
+void CDlgViewEqpSystemStatus::InitList_ChamberCtrl()
+{
+	m_listChamber.Create(_T("STATIC"), _T(""), WS_CHILD | WS_VISIBLE | SS_NOTIFY, CRect(0, 0, 0, 0), this, IDC_GROUP_LIST_VIEW_CHAMBER, NULL);
+	m_listChamber.CreateScrollBar(IDC_GROUP_SCROLL_VIEW_CHAMBER);
+	m_listChamber.CreateEditCtrl(IDC_EDIT_VIEW_CHAMBER_TEMPERATURE);
+	m_listChamber.SetEditEnableColumn(4);
+	m_listChamber.SetExplorerColumn(true);
+
+	CRect rt;
+	GetDlgItem(IDC_STATIC_LIST_CHAMBER)->GetWindowRect(&rt);
+
+	// 실제 모니터 해상도를 구해서 좌, 우측에 List Control 이 들어갈 수 있도록 동일한 Gap 을 두기 위함.
+	int nWidth = GetSystemMetrics(SM_CXSCREEN);
+
+	SetWindowPos(NULL, 0, 0, GetSystemMetrics(SM_CXSCREEN) - rt.left, 375, SWP_NOZORDER);
+
+	{
+		LPCTSTR lpszColumn[] = { _T("Chamber No"), _T("Communication Status"), _T("Current Temp"),/* _T("Recipe Temp"),*/ _T("Chamber Run Status"), nullptr };
+
+		for (int i = 0;; ++i)
+		{
+			if (nullptr == lpszColumn[i])
+				break;
+
+			m_listChamber.InsertColumn(lpszColumn[i], GetListCtrlColumn(i), TEXT_CENTER);
+			m_listChamber.SetItemHeight(50);
+		}
+	}
+
+	// List 는 Dialog 의 좌, 우측 Gap 사이에 넣는다.
+	CRect rtScreen = rt;
+
+	ScreenToClient(&rtScreen);
+
+	m_listChamber.MoveWindow(rtScreen.left, rtScreen.top, 310, 25);
+	m_listChamber.SetGroupHeight(0);
+
+	m_rect.left = rtScreen.left;
+	m_rect.top = rtScreen.top;
+	m_rect.right = nWidth - rt.left;
+	   	  
+
+
+
+
+
+
+
+}
+
+void CDlgViewEqpSystemStatus::InitList_DirList()
+{
+	LPCTSTR strTitle[] = { _T("No"),_T("Dir Name"),nullptr };
+
+	
+	m_GridDirList.SetEditable();
+	m_GridDirList.SetVirtualMode(FALSE);
+	m_GridDirList.SetAutoSizeStyle();
+	m_GridDirList.SetBkColor(ColorWhite);
+	TRY
+	{
+		m_GridDirList.SetColumnCount(2);
+		m_GridDirList.SetRowCount(30);
+		m_GridDirList.SetFixedRowCount(1);
+		m_GridDirList.SetFixedColumnCount(1);
+	}
+		CATCH(CMemoryException, e)
+	{
+		e->ReportError();
+		return;
+	}
+	END_CATCH
+
+		for (int col = 0; col < m_GridDirList.GetColumnCount(); col++)
+		{
+			CString str;
+
+			GV_ITEM Item;
+
+			Item.mask = GVIF_TEXT;
+			Item.row = 0;
+			Item.col = col;
+
+			str.Format(_T("%s"), strTitle[col]);
+
+			Item.strText = str;
+
+			m_GridDirList.SetItem(&Item);
+			m_GridDirList.SetItemFormat(0, col, DT_CENTER | DT_VCENTER | DT_SINGLELINE);
+		}
+
+	m_GridDirList.SetColumnWidth(0, 30);
+	m_GridDirList.SetColumnWidth(1, 200);
+
+	m_GridDirList.SetListMode(TRUE);
+	m_GridDirList.ShowWindow(SW_SHOW);
+
+
+}
+
+
+
+void CDlgViewEqpSystemStatus::Input_Status_Check()
+{
+	CMgrDio* pMgrDio = CMgrDio::GetMgr();
+	if (pMgrDio == NULL)
+		return;
+
+	bool bSubStage1Use = CMgrConfig::GetMgr()->GetSubEqpInfo().bStage1Use;
+	if (bSubStage1Use == true)
+	{
+		for (int i = 0; i < 8; i++)
+		{
+			if (pMgrDio->GetFanStatus(i) == TRUE)
+			{
+				m_FanStatus[i].SetBkColor(COLOR_GREEN_200, COLOR_GREEN_200);
+				m_FanStatus[i].SetFont("Verdana", 11, 1200);
+				m_FanStatus[i].SetTextColor(ColorWhite);
+			}
+			else
+			{
+				m_FanStatus[i].SetBkColor(COLOR_RED_200, COLOR_RED_200);
+				m_FanStatus[i].SetFont("Verdana", 11, 1200);
+				m_FanStatus[i].SetTextColor(ColorWhite);
+			}
+		}
+	}
+	bool bSubStage2Use = CMgrConfig::GetMgr()->GetSubEqpInfo().bStage2Use;
+	if (bSubStage2Use == true)
+	{
+		for (int i = 8; i < 16; i++)
+		{
+			if (pMgrDio->GetFanStatus(i) == TRUE)
+			{
+				m_FanStatus[i].SetBkColor(COLOR_GREEN_200, COLOR_GREEN_200);
+				m_FanStatus[i].SetFont("Verdana", 11, 1200);
+				m_FanStatus[i].SetTextColor(ColorWhite);
+			}
+			else
+			{
+				m_FanStatus[i].SetBkColor(COLOR_RED_200, COLOR_RED_200);
+				m_FanStatus[i].SetFont("Verdana", 11, 1200);
+				m_FanStatus[i].SetTextColor(ColorWhite);
+			}
+		}
+	}
+	
+
+/*
+	CString EqpRunStatus = CMgrStatus::GetMgr()->GetSubEqpRunStatus(0);
+
+	m_EQStatus.SetBkColor(COLOR_RED_200, COLOR_RED_200);
+	m_EQStatus.SetFont("Verdana", 11, 1200);
+	m_EQStatus.SetTextColor(ColorWhite);*/
+
+	//if (CMgrDio::GetMgr()->GetEmgStatus() == TRUE)
+	//{
+
+	//	m_EMGStatus.SetBkColor(COLOR_RED_128, COLOR_RED_128);
+	//	m_EMGStatus.SetFont("Verdana", 11, 1200);
+	//	m_EMGStatus.SetTextColor(ColorBlack);
+	//	m_EMGStatus.SetWindowText("ON");
+	//}
+	//else
+	//{
+	//	m_EMGStatus.SetBkColor(COLOR_GREEN, COLOR_GREEN);
+	//	m_EMGStatus.SetFont("Verdana", 11, 1200);
+	//	m_EMGStatus.SetTextColor(ColorBlack);
+	//	m_EMGStatus.SetWindowText("OFF");
+	//}
+
+	//if (CMgrDio::GetMgr()->GetSmoke1Status() == TRUE)
+	//{
+
+	//	m_SmokeStatus[0].SetBkColor(COLOR_GREEN, COLOR_GREEN);
+	//	m_SmokeStatus[0].SetFont("Verdana", 11, 1200);
+	//	m_SmokeStatus[0].SetTextColor(ColorBlack);
+	//}
+	//else
+	//{
+	//	m_SmokeStatus[0].SetBkColor(COLOR_RED_128, COLOR_RED_128);
+	//	m_SmokeStatus[0].SetFont("Verdana", 11, 1200);
+	//	m_SmokeStatus[0].SetTextColor(ColorBlack);
+	//}
+	//if (CMgrDio::GetMgr()->GetSmoke1Status() == TRUE)
+	//{
+
+	//	m_SmokeStatus[1].SetBkColor(COLOR_GREEN, COLOR_GREEN);
+	//	m_SmokeStatus[1].SetFont("Verdana", 11, 1200);
+	//	m_SmokeStatus[1].SetTextColor(ColorBlack);
+	//}
+	//else
+	//{
+	//	m_SmokeStatus[1].SetBkColor(COLOR_RED_128, COLOR_RED_128);
+	//	m_SmokeStatus[1].SetFont("Verdana", 11, 1200);
+	//	m_SmokeStatus[1].SetTextColor(ColorBlack);
+	//}
+
+	if (CMgrConfig::GetMgr() != NULL)
+	{
+		CString strConnectVolt;
+
+		GetDlgItemText(IDC_EDIT_CONTACT_VOLT_CUR_VALUE, strConnectVolt);
+		
+		if(strConnectVolt != CMgrConfig::GetMgr()->GetConnectVoltStr())
+		{
+			GetDlgItem(IDC_EDIT_CONTACT_VOLT_CUR_VALUE)->SetWindowText(CMgrConfig::GetMgr()->GetConnectVoltStr());
+		}
+	}
+
+
+}
+
+void CDlgViewEqpSystemStatus::Update_Dir_list(int nStageNo)
+{	
+	CMgrSerial* pMgrSerial = CMgrSerial::GetMgr();
+
+	if (pMgrSerial == NULL)
+		return;
+
+	CTime sel_date;
+
+	int nID = Get_BarcodeReadingFocus();
+
+	//Tray  Barcode 
+	if (nID == IDC_STATIC_FIND_TRAYBARCODE)
+	{
+		//Dir List Update
+		if (pMgrSerial->GetAtBarcode(nStageNo)->GetBarcode() != "")
+		{
+			Set_BarcodeStationNo(nStageNo);
+			m_Select_Date.GetCurSel(sel_date);
+
+			InitList_DirList();
+			GetDlgItem(Get_BarcodeReadingFocus())->SetWindowText(pMgrSerial->GetAtBarcode(nStageNo)->GetBarcode());
+
+			CFileFind finder;
+
+			CString strFilePath;
+
+			CString strTrayPath;
+			CString strChPath;
+
+			strFilePath = CMgrConfig::GetMgr()->GetLogFilePath();
+
+			strFilePath = CMgrConfig::GetMgr()->GetLogFilePath();
+			GetDlgItemText(IDC_STATIC_FIND_TRAYBARCODE, strTrayPath);
+			strFilePath.Format(_T("%s\\%02d_%02d_%02d"), strFilePath, sel_date.GetYear(), sel_date.GetMonth(), sel_date.GetDay());
+			strFilePath.Format(_T("%s\\Tray Barcode(%s)\\*"), strFilePath, pMgrSerial->GetAtBarcode(nStageNo)->GetBarcode());
+
+
+			BOOL bFolder = finder.FindFile(strFilePath);
+
+			//Directory
+			std::vector<CString> vecDirName;
+			CString DirName;
+			int nRow = 1;
+			CString strIndex = "";
+			while (bFolder)
+			{
+				bFolder = finder.FindNextFile();
+				if (finder.IsDirectory())
+				{
+					DirName = finder.GetFileName();
+					if (DirName.CompareNoCase(_T(".")) == 0 || DirName.CompareNoCase(_T("..")) == 0)
+					{
+						continue;
+					}
+						//vecDirName.push_back(finder.GetFileName());
+						strIndex.Format(_T("%d"), nRow - 1);
+						m_GridDirList.SetItemText(nRow, 0, strIndex);
+						m_GridDirList.SetItemText(nRow, 1, DirName);
+						m_GridDirList.Invalidate(false);
+						nRow++;
+				}
+			}				   
+
+			UI_Barcode_Focus(nID, false);
+			pMgrSerial->GetAtBarcode(0)->SetBarcode("");
+			GetDlgItem(Get_BarcodeReadingFocus())->Invalidate(false);
+		}
+	}
+	if (nID == IDC_STATIC_FIND_CHBARCODE)
+	{
+
+		if (pMgrSerial->GetAtBarcode(nStageNo)->GetBarcode() != "")
+		{
+			GetDlgItem(Get_BarcodeReadingFocus())->SetWindowText(pMgrSerial->GetAtBarcode(nStageNo)->GetBarcode());
+
+
+			UI_Barcode_Focus(nID, false);
+			pMgrSerial->GetAtBarcode(nStageNo)->SetBarcode("");
+			GetDlgItem(Get_BarcodeReadingFocus())->Invalidate(false);
+		}
+	}
+
+
+}
+
+void CDlgViewEqpSystemStatus::LoadChamber()
+{
+	m_listChamber.RemoveAllItems();
+
+	sGroupInfo stGroupInfo;
+
+	stGroupInfo.bExpand = TRUE;
+	stGroupInfo.strText = "";
+	stGroupInfo.bDrawExpand = FALSE;
+
+	int nIndex = m_listChamber.InsertGroup(&stGroupInfo);
+
+	CMgrChamber* pMgr = CMgrChamber::GetMgr();
+
+	if (!pMgr)
+		return;
+
+	std::vector<SChamber*>& vecDevice = pMgr->GetDeviceChamber();
+
+	auto iter = vecDevice.begin();
+	auto iterE = vecDevice.end();
+
+	while (iter != iterE)
+	{
+		SChamber* lpDeviceChamber = (*iter);
+
+		if (lpDeviceChamber)
+		{
+			int nItem = m_listChamber.InsertItem(nIndex, _T(""));
+
+			std::vector<CString> vecValue;
+			lpDeviceChamber->GetChamberInfo(vecValue,true);
+
+			int nSubItem = 0;
+
+			auto it = vecValue.begin();
+			auto itE = vecValue.end();
+
+			while (it != itE)
+			{
+				m_listChamber.SetItemText(nIndex, nItem, nSubItem, (*it));
+
+				nSubItem++;
+
+				++it;
+			}
+		}
+
+		++iter;
+	}
+
+	m_listChamber.MoveWindow(m_rect.left, m_rect.top, 680, 180);
+}
+
+int CDlgViewEqpSystemStatus::GetListCtrlColumn(int nIndex)
+{
+	switch (nIndex)
+	{
+
+	case eViewChamberObject_SystemStatusView_Serial: return 110;
+	case eViewChamberObject_SystemStatusView_Status: return 110;
+	case eViewChamberObject_SystemStatusView_CurrentTemp: return 170;
+	case eViewChamberObject_SystemStatusView_SettingAutoTemp: return 170;
+	case eViewChamberObject_SystemStatusView_OnOff: return 110;
+	}
+	return 50;
+}
+
+void CDlgViewEqpSystemStatus::OnBnClickedButtonContactVoltApply()
+{
+	CString strCurValue;
+	CString strSettingValue;
+
+	//Step 1. Login
+	CMgrAccount* pMgr = CMgrAccount::GetMgr();
+	sAccount * lpAccount;
+
+	lpAccount = pMgr->GetLoginedAccount();
+	if (lpAccount == nullptr)
+	{
+		AfxMessageBox("Login Please");
+		return;
+	}
+	if (_tcsicmp(lpAccount->szUserLevel, "Admin") != 0)
+	{
+		AfxMessageBox("Only Admin User Level can do this.");
+		return;
+	}
+
+	//Step 2. Current Value 
+	GetDlgItemText(IDC_EDIT_CONTACT_VOLT_CUR_VALUE, strCurValue);
+	//Step 3. Setting Value
+	GetDlgItemText(IDC_EDIT_CONTACT_VOLT_SETTING_VALUE, strSettingValue);
+	//Step 4. Exception 
+	//Case : Same Value -> return
+	if (strCurValue == strSettingValue)
+	{
+		return;
+	}
+	//Case : Setting Value < Lower Limit Value -> return
+	if (atof(strSettingValue) < 0.3f)
+	{
+		AfxMessageBox("The set value is out of the lower limit value.");
+		return;
+	}
+
+	//Case : Setting Vlaue > High Limit Value -> return
+
+	//Step 5. Common.ini -> Setting Value Apply & Save 
+	CString strFilePath;
+	strFilePath.Format(_T("%s\\Config\\%s"), (LPCSTR)GetExePath(), _T("Common.ini"));
+
+	CString strAppName;
+	CString strKeyName;
+
+	strAppName = _T("EQProperty");
+
+	strKeyName = _T("ConnectVoltage");
+
+	INIWriteFloat(strAppName, strKeyName, atof(strSettingValue), strFilePath);
+
+	if (CMgrConfig::GetMgr() == NULL)
+	{
+		AfxMessageBox("Contact volt setup is fail");
+		return;
+	}
+
+	CMgrConfig::GetMgr()->SetConnectVolt(atof(strSettingValue));
+
+	AfxMessageBox("Contact volt setup is complete");
+
+
+}
+
+
+void CDlgViewEqpSystemStatus::OnBnClickedButtonBarcodeCheckOption()
+{
+	//Step 1. Login
+	CMgrAccount* pMgr = CMgrAccount::GetMgr();
+	sAccount * lpAccount;
+
+	lpAccount = pMgr->GetLoginedAccount();
+	if (lpAccount == nullptr)
+	{
+		AfxMessageBox("Login Please");
+		return;
+	}
+	if (_tcsicmp(lpAccount->szUserLevel, "Admin") != 0)
+	{
+		AfxMessageBox("Only Admin User Level can do this.");
+		return;
+	}
+
+
+	//Step 2. Option Select & Setting
+	CMgrSerial* pMgrSerial = CMgrSerial::GetMgr();
+	if (pMgrSerial == NULL)
+		return;
+	if (pMgrSerial->Get_ChBarcodeCheckMode() == false)
+	{
+		m_Btn_BarcodeOption.SetWindowText("Tray&&Ch");
+		pMgrSerial->Set_ChBarcodeCheckMode(true);
+	}
+	else
+	{
+		m_Btn_BarcodeOption.SetWindowText("Tray");
+		pMgrSerial->Set_ChBarcodeCheckMode(false);
+	}
+
+}
+
+
+void CDlgViewEqpSystemStatus::OnBnClickedButtonLogFolderShotcuts()
+{
+	//Step 1. ChannelBarcode.ini Find Ch Barcode
+	CString strFilePath = "";
+	CString strTrayPath = "";
+	CString strChPath = "";
+	CString strChBarcodePath = "";
+	int nID;
+	CTime sel_date;
+	CString FileName;
+
+	CMgrSerial* pMgrSerial = CMgrSerial::GetMgr();
+
+	if (pMgrSerial == NULL)
+		return;
+	m_Select_Date.GetCurSel(sel_date);
+
+	strFilePath = CMgrConfig::GetMgr()->GetLogFilePath();
+	GetDlgItemText(IDC_STATIC_FIND_TRAYBARCODE, strTrayPath);
+	strFilePath.Format(_T("%s\\%02d_%02d_%02d"), strFilePath, sel_date.GetYear(), sel_date.GetMonth(), sel_date.GetDay());
+	strFilePath.Format(_T("%s\\Tray Barcode(%s)"), strFilePath, strTrayPath);
+	strFilePath.Format(_T("%s\\%s"), strFilePath, Get_SchedulePath());
+	strChBarcodePath.Format(_T("%s\\ChannelBarcode.ini"), strFilePath, Get_SchedulePath());
+
+	//CString strAppName = _T("Cycler");
+	GetDlgItemText(IDC_STATIC_FIND_CHBARCODE, strChPath);
+
+	CString strAppName ;
+	strAppName.Format(_T("Channel Barcode_%s"), strChPath);
+	strChPath = INIReadStr(strAppName, _T("Ch"), strChBarcodePath);
+
+	strFilePath.Format(_T("%s\\%sCH"), strFilePath, strChPath);
+
+	CFileDialog ins_dlg(TRUE, NULL, "", OFN_HIDEREADONLY | OFN_NOCHANGEDIR, "All Files(*.*)|*.*||");
+	ins_dlg.m_ofn.nFilterIndex = 2;
+	ins_dlg.m_ofn.lpstrInitialDir = strFilePath;
+
+	if (ins_dlg.DoModal() == IDOK)
+	{
+		pMgrSerial->GetAtBarcode(Get_BarcodeStagionNo())->SetBarcode("");
+		GetDlgItem(Get_BarcodeReadingFocus())->Invalidate(false);
+		FileName = ins_dlg.GetPathName();
+	}
+
+
+	ULONG lCode = (ULONG)ShellExecute(NULL, "open", _T(FileName), NULL, NULL, SW_SHOW);
+
+	if (lCode <= 32)
+	{
+		AfxMessageBox("Failed to open log path");
+	}
+
+
+}
+
+
+void CDlgViewEqpSystemStatus::OnStnClickedStaticFindTraybarcode()
+{
+	Set_BarcodeReadingFocus(IDC_STATIC_FIND_TRAYBARCODE);
+}
+
+void CDlgViewEqpSystemStatus::Set_BarcodeReadingFocus(int nID)
+{
+	m_nBarcodeReadingFocus = nID;
+	UI_Barcode_Focus(nID,true);
+
+}
+
+void CDlgViewEqpSystemStatus::Set_ChBarcodeCheckMode(bool bChBarcodeCheckMode)
+{
+	m_bChBarcodeCheck = bChBarcodeCheckMode;
+
+}
+
+void CDlgViewEqpSystemStatus::OnGridEndSelChange(NMHDR * pNotifyStruct, LRESULT * pResult)
+{
+	NM_GRIDVIEW* pItem = (NM_GRIDVIEW*)pNotifyStruct;
+	CList<int>& lstSelected = m_GridDirList.GetSelectedRows();
+
+	
+	Set_SchedulePath(m_GridDirList.GetItemText(pItem->iRow, pItem->iColumn));
+
+}
+
+void CDlgViewEqpSystemStatus::Set_SchedulePath(CString strSchedulePath)
+{
+	m_strSchedulePath = strSchedulePath;
+}
+
+
+void CDlgViewEqpSystemStatus::OnStnClickedStaticFindChbarcode()
+{
+	Set_BarcodeReadingFocus(IDC_STATIC_FIND_CHBARCODE);
+}
+
+
+void CDlgViewEqpSystemStatus::OnMcnSelchangeMonthcalendar1(NMHDR *pNMHDR, LRESULT *pResult)
+{
+	LPNMSELCHANGE pSelChange = reinterpret_cast<LPNMSELCHANGE>(pNMHDR);
+	// TODO: 여기에 컨트롤 알림 처리기 코드를 추가합니다.
+	*pResult = 0;
+
+	CTime sel_date;
+	int sel_year, sel_month, sel_day;
+	m_Select_Date.GetCurSel(sel_date);
+	sel_year = sel_date.GetYear();
+	sel_month = sel_date.GetMonth();
+	sel_day = sel_date.GetDay();
+}
+
+void CDlgViewEqpSystemStatus::UI_Barcode_Focus(int nID, BOOL bFocus)
+{
+	COLORREF BackColor;
+	COLORREF TextColor;
+	if (bFocus == true)
+	{
+		BackColor = ColorBlack;
+		TextColor = ColorWhite;
+	}
+	else
+	{
+		BackColor = ColorWhite;
+		TextColor = ColorBlack;
+	}
+	if (nID == IDC_STATIC_FIND_TRAYBARCODE)
+	{
+		m_Data_TrayBarcode.SetBkColor(BackColor, BackColor);
+		m_Data_TrayBarcode.SetTextColor(TextColor);
+
+		m_Data_ChannelBarcode.SetBkColor(TextColor, TextColor);
+		m_Data_ChannelBarcode.SetTextColor(BackColor);
+	}
+	
+	if (nID == IDC_STATIC_FIND_CHBARCODE)
+	{
+		m_Data_TrayBarcode.SetBkColor(TextColor, TextColor);
+		m_Data_TrayBarcode.SetTextColor(BackColor);
+
+		m_Data_ChannelBarcode.SetBkColor(BackColor, BackColor);
+		m_Data_ChannelBarcode.SetTextColor(TextColor);
+	}
+
+
+}

@@ -1,0 +1,91 @@
+#include "stdafx.h"
+#include "CCalibratorSocket.h"
+
+
+CCalibratorSocket::CCalibratorSocket()
+{
+}
+
+CCalibratorSocket::CCalibratorSocket(HWND hWnd, long nClientNum)
+{
+	m_pHwnd = hWnd;
+	m_ClientNum = nClientNum;
+}
+
+CCalibratorSocket::~CCalibratorSocket()
+{
+}
+
+
+void CCalibratorSocket::OnAccept(int nErrorCode)
+{
+	TRACE("ACCEPT Errocode = %d\r\n", nErrorCode);
+	SendMessage(m_pHwnd, WM_SOCKET_ACCEPT, m_ClientNum, nErrorCode);
+	//g_pMFrm->m_bServeRun = TRUE;
+
+	CSocket::OnAccept(nErrorCode);
+}
+
+
+void CCalibratorSocket::OnConnect(int nErrorCode)
+{
+	TRACE("On Connect Errorcode=%d\r\n", nErrorCode);
+	if (m_pHwnd)
+	{
+		SendMessage(m_pHwnd, WM_SOCKET_CONNECT, m_ClientNum, nErrorCode);
+	}
+	
+	CSocket::OnConnect(nErrorCode);
+}
+
+
+void CCalibratorSocket::OnReceive(int nErrorCode)
+{
+	TRACE("RECEIVE Errocode = %d\r\n", nErrorCode);
+	SendMessage(m_pHwnd, WM_SOCKET_RECEIVE, m_ClientNum, nErrorCode);
+
+	CSocket::OnReceive(nErrorCode);
+}
+
+
+void CCalibratorSocket::OnClose(int nErrorCode)
+{
+	TRACE("OnClose Errorcode=%d\r\n", nErrorCode);
+	SendMessage(m_pHwnd, WM_SOCKET_DISCLOSE, m_ClientNum, nErrorCode);
+	//g_pMFrm->m_pViewOperate->ServerTcpipClose();
+
+	CSocket::OnClose(nErrorCode);
+}
+
+
+BOOL CCalibratorSocket::OnMessagePending()
+{
+	if (m_dwTick != 0)
+	{
+		DWORD dwCur = GetTickCount();
+		DWORD dwSpan = dwCur - m_dwTick;
+
+		if (dwSpan >= TIME_OUT)
+		{
+			CancelBlockingCall();
+			return FALSE;
+		}
+	}
+
+	return CSocket::OnMessagePending();
+}
+
+int CCalibratorSocket::Send(const void * lpBuf, int nBufLen, int nFlags)
+{
+	return CAsyncSocket::Send(lpBuf, nBufLen, nFlags);
+}
+
+void CCalibratorSocket::StartTimeout()
+{
+	m_dwTick = GetTickCount();
+}
+
+void CCalibratorSocket::EndTimeout()
+{
+	m_dwTick = 0;
+}

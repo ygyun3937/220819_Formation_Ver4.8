@@ -1,0 +1,43 @@
+#pragma once
+
+#include "PCanCom.h"
+
+class CMgrPCan : public CSingleton<CMgrPCan>
+{
+public:
+	CMgrPCan();
+	virtual~CMgrPCan();
+
+	void	Initialize();
+	void	Dispose();
+
+	void	StartThread();
+	void	StopThread();
+	
+	CPCanCom*	GetAt(int nCh);							//시리얼 얻어오기
+	CPCanCom*	GetAtComm(int nPrimaryKey);
+	//int			GetSize();
+	CPCanCom*	GetStation(int nStation);
+
+	//CList< CPCanCom*, CPCanCom* >&	GetComList();		// 사용하지않음?
+
+	void Function_AlarmClear();
+
+	void	SetAlarmStatus(bool bAlarm) { m_bAlarm = bAlarm; }
+	bool		GetAlarmStatus() { return m_bAlarm; }
+
+
+	void	SetInverterStatus(int nStatus) { m_nInverterStatus = nStatus; }
+	int		GetInverterStatus() { return m_nInverterStatus; }
+
+	void    ClosePcan();
+private:
+	bool			m_bAlarm;
+	CList< CPCanCom*, CPCanCom* > m_listCom;
+	int	m_nInverterStatus;
+
+private:
+	void	RemoveAll();
+	void	RemoveElement(int nPrimaryKey);
+};
+

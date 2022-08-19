@@ -1,0 +1,224 @@
+#pragma once
+
+//#include <deque>
+
+
+struct ST_SerialINI
+{
+//COMM
+	DWORD	dwBaud;
+
+	BYTE	bDataBit;
+	BYTE	bStopBit;
+	BYTE	bParity;
+
+	int		nDelimiter;
+	int		nPortNumber;
+
+	BOOL	bBufClear;
+
+//SERIAL INFO
+	int		nPrimaryKey;
+	int		nChamberChannel		= 0;
+	int		nBmsPowerChannel	= 0;
+	int		nChamberControlType	= 0;
+	int		nRoomChannel		= 0;
+
+	CString strName;
+	int nDaqType;
+};
+
+enum eFlowControl
+{
+	FC_NONE = 0,
+	FC_XONXOFF,
+	FC_RTSCTS,
+	FC_DTRDSR,
+	FC_FULLHARDWARE,
+};
+
+#define BUFF_SIZE				(4192)
+#define	SERIAL_BUFF_SIZE		(8192)
+#define	ASCII_XON				(0x11)
+#define	ASCII_XOFF				(0x13)
+#define LIMIT_CELL_CHA_CV_VOLT	(4.5)
+#define	LIMIT_CELL_DIS_CV_VOLT	(0.0)
+
+enum eDaQDataType
+{
+	READ_TYPE_VOLT = 0,
+	READ_TYPE_TEMPERATURE,
+	READ_TYPE_THERMISTOR
+};
+enum DaqProtocolInfo
+{
+	Size_Byte_STX = 1,
+	Size_Byte_ETX = 1,
+	Size_Byte_Type = 1,		//DATA FRAME 끝에 붙여서 사용(DAQ TYPE으로 HOST가 계산)
+
+	Size_Byte_Data = 4,
+	Size_Max_Channel = 128,
+
+	Size_Total_Frame = (Size_Byte_Data*Size_Max_Channel) + (Size_Byte_STX + Size_Byte_ETX + Size_Byte_Type),
+
+	Index_SIGN = 1,
+	Index_DATA1 = 2,
+	Index_DATA2 = 3,
+	Index_DATA3 = 4
+};
+
+enum eChamberModelType
+{
+	eChamberModelTypeTemi2500 = 1,
+	eChamberModelTypeNex,
+	eChamberModelTT5166,
+	eChamberModelTypeOther,/*필요시 추가*/
+
+};
+
+enum EVENT_CHAMBER
+{
+	EVENT_CHAMBER_SET_TEMP = 0,
+	EVENT_CHAMBER_ON,
+	EVENT_CHAMBER_OFF,
+	EVENT_CHAMBER_SIZE,
+};
+
+static TCHAR* g_lpszAsciiCode[] = {
+	_T(" "), _T(" "), _T(" "), _T(" "), _T(" "), _T(" "), _T(" "), _T(" "), _T(" "), _T(" "), //0~9           // 0x1~0x9
+	_T(" "), _T(" "), _T(" "), _T(" "), _T(" "), _T(" "), _T(" "), _T(" "), _T(" "), _T(" "), //10~19    	 // 0xa~0x13
+	_T(" "), _T(" "), _T(" "), _T(" "), _T(" "), _T(" "), _T(" "), _T(" "), _T(" "), _T(" "), //20~29    	 // 0x14~0x1d
+	_T(" "), _T(" "), _T(" "), _T("!"), _T("*"), _T("#"), _T("$"), _T("%"), _T("&"), _T("'"), //30~39    	 // 0x1d~0x27
+	_T("("), _T(")"), _T("*"), _T("+"), _T(","), _T("-"), _T("."), _T("/"), _T("0"), _T("1"), //40~49    	 // 0x27~0x31
+	_T("2"), _T("3"), _T("4"), _T("5"), _T("6"), _T("7"), _T("8"), _T("9"), _T(":"), _T(";"), //50~59    	 // 0x31~3b
+	_T("<"), _T("="), _T(">"), _T("?"), _T("@"), _T("A"), _T("B"), _T("C"), _T("D"), _T("E"), //60~69    	 // 0x3b~45
+	_T("F"), _T("G"), _T("H"), _T("I"), _T("J"), _T("K"), _T("L"), _T("M"), _T("N"), _T("O"), //70~79    	 // 0x45~4f
+	_T("P"), _T("Q"), _T("R"), _T("S"), _T("T"), _T("U"), _T("V"), _T("W"), _T("X"), _T("Y"), //80~89    	 // 0x4f~59
+	_T("Z"), _T("["), _T("＼"), _T("]"), _T("^"), _T("－"), _T("｀"), _T("a"), _T("b"), _T("c"), //90~99		 // 0x59~63
+	_T("d"), _T("e"), _T("f"), _T("g"), _T("h"), _T("i"), _T("j"), _T("k"), _T("l"), _T("m"), //100~109		 // 0x63~6d
+	_T("n"), _T("o"), _T("p"), _T("q"), _T("r"), _T("s"), _T("t"), _T("u"), _T("v"), _T("w"), //110~119		 // 0x6d~77
+	_T("x"), _T("y"), _T("z"), _T("{"), _T("|"), _T("}"), _T("-"), _T(""), _T(""), _T(""),  //120~129 - 126 // 0x77~81
+	_T(""), _T(""), _T(""), _T(""), _T(""), _T(""), _T(""), _T(""), _T(""), _T(""),  //130~139		 // 0x81~8b
+	_T(""), _T(""), _T(""), _T(""), _T(""), _T(""), _T(""), _T(""), _T(""), _T(""),  //140~149		 // 0x8b~95
+	_T(""), _T(""), _T(""), _T(""), _T(""), _T(""), _T(""), _T(""), _T(""), _T(""),  //150~159		 // 0x95~9f
+	_T(""), _T(""), _T(""), _T(""), _T(""), _T(""), _T(""), _T(""), _T(""), _T(""),  //160~169		 // 0x9f~a9
+	nullptr
+};
+
+class CSerialCom : public CWnd
+{
+	DECLARE_DYNAMIC(CSerialCom)
+public:
+	CSerialCom(ST_SerialINI& refParam);
+	~CSerialCom();
+
+	void	StartThread();
+	void	StopThread();
+
+	int		GetPrimaryKey() { return m_nPrimaryKey; }	
+
+	BOOL	OpenPort();
+	BOOL	Close();
+	BOOL	Connect();
+	BOOL	IsConnected();
+
+private:
+	int			m_nPrimaryKey;
+	int			m_nChamberChannelNum;
+	int			m_nChamberControlType;
+	int			m_nDaqReadType;
+
+	int			m_nFlowControl;
+	int			m_nTimeOut;
+
+	char		m_pszRecv[1024];
+	int			m_nRecvSize;
+
+	HANDLE		m_hCom;
+
+	BOOL		m_bLoop;
+	BOOL		m_bRecvCheck;
+
+	CString		m_strPortNumber;
+
+	CString		m_strDeviceName;
+	int			m_nDaqDataType;
+
+	CWinThread*	m_pThread;
+
+	ST_SerialINI	m_stSerialOptionValue;
+
+	float	m_fSetSV;
+	bool	m_bChamberRun;
+
+	CCriticalSection	m_csLock;
+
+private:
+	void	SendChamberOnOff(BOOL bOn);
+	void	SendChamberSetTempValue();
+	void	SendChamberTemp(float fValue);
+	void	SetPortNumberStr(int nPortNumber);
+	void	SetPrimaryKey(int nPrimaryKey) { m_nPrimaryKey = nPrimaryKey; }
+	void	RunDaq(int Item);
+	void	RunChamber();	
+	void	SetChamberControlType(int nChamberControlType);
+	void	SetChamberChannel(int nChamberNumber);
+	void	ClosePort();
+
+	int		CountRx();
+	int		Receive(char *pBuf, int len);
+	int		GetChamberControlType();
+	int		GetChamberChannel();	
+
+	// DAQ 관련 21-02-18
+	void	SetDeviceName(CString strName);
+	CString GetDeviceName();
+	void	SetDaqDataType(int nType);
+	int		GetDaqDataType();
+	//void	SetChamberChannel(int nChannel);
+
+	int		m_nChamberEvent[EVENT_CHAMBER_SIZE];
+
+
+public:
+	bool	IsChamberExecute();
+	bool	IsChamberOn();
+	bool	IsChamberOff();
+	bool	ReadChamberTypeTemi();
+	BOOL	RunChamberNEX1000();
+	bool	RunChamberTemi2500();	//주기적 READ
+
+	bool	Command_RRD();
+	////220204 YGYUN TT5166 추가 (Formation)
+	//Version 1 
+	bool	RunChamberTT5166();
+	void	SendChamber_TT5166_SetTempValue();
+	void	SendChamber_TT5166_OnOff(BOOL bOn);
+	//Version 2
+	bool	ChamberTT5166_IsChamberStatus();
+	bool	ChamberTT5166_IsTemp();
+	bool	ChamberTT5166_IsAlarm();
+
+
+	BOOL	SetTimeout(int readTimeout, int writeTimeout, int readIntervalTimeout);
+
+	WORD	CRC16(const BYTE *nData, WORD wLength);
+
+	DWORD	Send(const char *msg, int len);	
+	
+	CString	GetPortNumberStr();
+	static	UINT	SerialThread(LPVOID pParam);
+
+	void		SetChamberEvent(int nEventIndex, int nEventValue = -1);
+	int*		GetChamberEvent();
+
+	void		m_fnSetSV(float	fTemp);
+
+
+
+
+
+protected:
+	DECLARE_MESSAGE_MAP()
+};
+

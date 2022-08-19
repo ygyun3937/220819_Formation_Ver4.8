@@ -1,0 +1,367 @@
+#include <conio.h>
+
+#include "stdafx.h"
+#include "CAdvantechModbus.h"
+
+// -------------------------------------------------------------------------------------------------
+// EVENTS
+
+//void	ConnectTcpServerCompletedEventHandler(long lResult, char *i_szIp, void *i_Param);
+void	DisconnectTcpServerCompletedEventHandler(long lResult, char *i_szIp, void *i_Param);
+void	ModbusWriteCompletedEventHandler(long lResult, void *i_Param);
+
+void	ClientReadCoil_1_32_Handler(long lResult, unsigned char *i_byData, int i_iLen, void *i_Param);
+void	ClientReadCoil_65_96_Handler(long lResult, unsigned char *i_byData, int i_iLen, void *i_Param);
+
+void	ClientReadCoil_1_12_Handler(long lResult, unsigned char *i_byData, int i_iLen, void *i_Param);
+
+DWORD m_dwStartTick;
+DWORD m_dwCurTick;
+DWORD m_dwWriteTick;
+
+DWORD m_dwReadFail;
+DWORD m_dwWriteFail;
+
+// -------------------------------------------------------------------------------------------------
+
+CAdvantechModbus::CAdvantechModbus()
+{
+	Initialize();
+}
+
+CAdvantechModbus::~CAdvantechModbus()
+{
+	Dispose();
+}
+
+bool CAdvantechModbus::Initialize()
+{
+	InitializeVariables();
+
+	return true;
+}
+
+void CAdvantechModbus::Dispose()
+{
+	StopThread();
+}
+
+bool CAdvantechModbus::InitializeVariables()
+{
+	m_pMeasureThread = NULL;
+
+	return true;
+}
+
+// -------------------------------------------------------------------------------------------------
+// EVENT
+
+void ConnectTcpServerCompletedEventHandler(long lResult, char * i_szIp, void * i_Param)
+{
+	CString logMessage;
+	logMessage.Format("[DEVICE][Modbus][Advantech] Connect to '%s' result = %d\n", i_szIp, lResult);
+	SYSLOG(System, logMessage);
+}
+
+void DisconnectTcpServerCompletedEventHandler(long lResult, char * i_szIp, void * i_Param)
+{
+	CString logMessage;
+	logMessage.Format("[DEVICE][Modbus][Advantech] Disconnect from '%s' result = %d\n", i_szIp, lResult);
+	SYSLOG(System, logMessage);
+}
+
+void ModbusWriteCompletedEventHandler(long lResult, void * i_Param)
+{
+	DWORD gapTick = GetTickCount() - m_dwWriteTick;
+	printf("Coil write result = %d (%d ms)\n", lResult, gapTick);
+
+	if (lResult != MODERR_SUCCESS)
+	{
+		m_dwWriteFail++;
+	}
+}
+
+void ClientReadCoil_1_32_Handler(long lResult, unsigned char * i_byData, int i_iLen, void * i_Param)
+{
+	int i;
+
+	if (lResult == MODERR_SUCCESS)
+	{
+		printf("Read[1~32] = ");
+		for (i = 0; i < i_iLen; i++)
+		{
+			printf("%02X ", i_byData[i]);
+		}
+		printf("\n");
+	}
+	else
+	{
+		printf("Failed to read err = %d\n", lResult);
+		m_dwReadFail++;
+	}
+}
+
+void ClientReadCoil_65_96_Handler(long lResult, unsigned char * i_byData, int i_iLen, void * i_Param)
+{
+	int i;
+
+	if (lResult == MODERR_SUCCESS)
+	{
+		printf("Read[65~96] = ");
+		for (i = 0; i < i_iLen; i++)
+		{
+			printf("%02X ", i_byData[i]);
+		}
+		printf("\n");
+	}
+	else
+	{
+		printf("Failed to read err = %d\n", lResult);
+		m_dwReadFail++;
+	}
+}
+
+void ClientReadCoil_1_12_Handler(long lResult, unsigned char * i_byData, int i_iLen, void * i_Param)
+{
+	int i;
+
+	if (lResult == MODERR_SUCCESS)
+	{
+		printf("Read[1~12] = ");
+		for (i = 0; i < i_iLen; i++)
+		{
+			printf("%02X ", i_byData[i]);
+		}
+		printf("\n");
+	}
+	else
+	{
+		printf("Failed to read err = %d\n", lResult);
+		m_dwReadFail++;
+	}
+}
+
+// -------------------------------------------------------------------------------------------------
+
+int CAdvantechModbus::OpenModbus(CString strIpAddress, int nPort)
+{
+	m_strIpAddress = strIpAddress;
+	m_nPort = nPort;
+
+	// MOD_Initialize
+	// Initialize the MODBUS library resource.
+	long resultValue = MOD_Initialize();
+	return resultValue;
+}
+
+int CAdvantechModbus::CloseModbus()
+{
+	// MOD_ReleaseTcpClientResource
+	// Release all the allocated memory for clients. This function has to be called after calling MOD_StopTcpClient
+	long resultValue = MOD_ReleaseTcpClientResource();
+	if (MODERR_SUCCESS != resultValue)
+	{ }
+
+	// MOD_Terminate
+	// Terminate the MODBUS library and release resource.
+	// Before calling this function, all MODBUS clients and servers have to be stopped.
+	resultValue = MOD_Terminate();
+	if (MODERR_SUCCESS != resultValue)
+	{ }
+
+	return resultValue;
+}
+
+int CAdvantechModbus::ConnectServer()
+{
+	//unsigned long ulClientHandle;
+	DWORD dwCount;
+
+	// MOD_AddTcpClientConnect
+	// Add a MODBUS - TCP client into the polling list.This function has to be called before calling MOD_StartTcpClient.
+	long resultValue = MOD_AddTcpClientConnect(LPSTR(LPCTSTR(m_strIpAddress)),	// remote server IP
+												100,							// scan interval (ms)
+												3000,							// connection timeout (ms)
+												100,							// transaction timeout (ms)
+												ConnectTcpServerCompletedEventHandler,
+												DisconnectTcpServerCompletedEventHandler,
+												NULL,
+												&m_ulClientHandle);
+
+	if (MODERR_SUCCESS != resultValue)
+		return resultValue;
+
+	// -------------------------------------------------------------------------
+
+	// MOD_AddTcpClientReadTag
+	// Add a MODBUS-TCP client tag into the data polling list.
+	// This function has to be called after calling MOD_AddTcpClientConnect, and before calling MOD_StartTcpClient.
+	//resultValue = MOD_AddTcpClientReadTag(m_ulClientHandle,
+	//										1,
+	//										MODBUS_READCOILSTATUS,
+	//										1,
+	//										32,
+	//										ClientReadCoil_1_32_Handler);
+	//if (MODERR_SUCCESS != resultValue)
+	//	return resultValue;
+
+	//resultValue = MOD_AddTcpClientReadTag(m_ulClientHandle,
+	//										1,
+	//										MODBUS_READCOILSTATUS,
+	//										65,
+	//										32,
+	//										ClientReadCoil_65_96_Handler);
+
+	//if (MODERR_SUCCESS != resultValue)
+	//	return resultValue;
+
+	// -------------------------------------------------------------------------
+
+	resultValue = MOD_AddTcpClientReadTag(m_ulClientHandle,
+											1,
+											MODBUS_READCOILSTATUS,
+											1,
+											12,
+											ClientReadCoil_1_12_Handler);
+
+	if (MODERR_SUCCESS != resultValue)
+		return resultValue;
+
+	// -------------------------------------------------------------------------
+
+	// MOD_StartTcpClient
+	// Start the MODBUS-TCP client. After calling with MODERR_SUCCESS returned, the client thread will start polling all clients and their reading tags.
+	resultValue = MOD_StartTcpClient();
+	if (MODERR_SUCCESS != resultValue)
+		return resultValue;
+
+	// MOD_SetTcpClientPriority
+	// Set the priority of the MODBUS-TCP client running thread.
+	// Before calling this function, the MODBUS - TCP client has to be successfully started
+	resultValue = MOD_SetTcpClientPriority(THREAD_PRIORITY_HIGHEST);
+
+	m_dwStartTick = GetTickCount();
+	m_dwReadFail = 0;
+	m_dwWriteFail = 0;
+	dwCount = 1;
+
+	// -------------------------------------------------------------------------
+
+	StartThread();
+
+	return resultValue;
+}
+
+int CAdvantechModbus::DisconnectServer()
+{
+	m_bLoopMeasure = false;
+
+	// MOD_StopTcpClient
+	// Stop the MODBUS-TCP client. After calling this function, the client thread will terminate and all polling will stop
+	long resultValue = MOD_StopTcpClient();
+	if (MODERR_SUCCESS != resultValue)
+	{ }
+
+	//char ch = _getch();
+
+	return 0;
+}
+
+// -------------------------------------------------------------------------------------------------
+
+bool CAdvantechModbus::StartThread()
+{
+	if (NULL == m_pMeasureThread)
+	{
+		m_pMeasureThread = AfxBeginThread(MeasureDeviceThread, this);
+	}
+
+	return true;
+}
+
+bool CAdvantechModbus::StopThread()
+{
+	m_bLoopMeasure = false;
+
+	if (m_pMeasureThread)
+	{
+		::WaitForSingleObject(m_pMeasureThread->m_hThread, INFINITE);
+		m_pMeasureThread = NULL;
+	}
+
+	return true;
+}
+
+UINT CAdvantechModbus::MeasureDeviceThread(LPVOID pParam)
+{
+	CAdvantechModbus* pAdvantechModbus = (CAdvantechModbus*)pParam;
+	if (!pAdvantechModbus)
+	{
+		return 0;
+	}
+
+	while (pAdvantechModbus->m_bLoopMeasure)
+	{
+		pAdvantechModbus->MeasureDevice();
+		Sleep(1);
+	}
+
+	return 0;
+}
+
+void CAdvantechModbus::MeasureDevice()
+{
+	int iAddr = 1;
+	int iCount = 0;
+	int iCoil = 1, iPoints = 24, iLen = 3;
+	unsigned char byData[8] = { 0 };
+
+	DWORD dwWriteInterval = 1000;
+	DWORD dwCount;
+	LONG lRet;
+
+	dwCount = 1;
+
+	while (m_bLoopMeasure)
+	{
+		// GET DATA
+		//m_dwCurTick = GetTickCount();
+		//if (m_dwCurTick >= m_dwStartTick + dwWriteInterval * dwCount)
+		//{
+		//	// MOD_ForceTcpClientMultiCoils
+		//	// Set the multiple coils output.
+		//	// i_ulClientHandle = The MODBUS-TCP client handle.
+		//	// i_byAddr = The slave(server) address, normally is set to 1.
+		//	// i_iStartIndex = The starting coil address for writing.
+		//	// i_iTotalPoint = The total of coil points to write.
+		//	// i_byTotalByte = The total byte length of data.
+		//	// i_byData = The byte data of coils to write.
+		//	//            For example, if the i_iTotalPoint is 40, then the i_byTotalByte must be 5 (8 coils form 1 byte).
+		//	//            The order of this buffer is as follow : [Coil 0~7], [Coil 8~15]¡¦
+		//	// evtHandle = The pointer of the call back function.The function will be called when writing data completed
+
+
+		//	dwCount++;
+
+		//	lRet = MOD_ForceTcpClientMultiCoils(m_ulClientHandle, iAddr, iCoil, iPoints, iLen, byData, ModbusWriteCompletedEventHandler);
+		//	if (ERROR_SUCCESS == lRet)
+		//	{
+		//		byData[0]++;
+		//		byData[1]++;
+		//		byData[2]++;
+		//		m_dwWriteTick = m_dwCurTick;
+		//		//printf("MOD_ForceTcpClientMultiCoils start (%d) = %d\n", dwCount, m_dwWriteTick);
+
+		//		CString logMessage;
+		//		logMessage.Format("MOD_ForceTcpClientMultiCoils start (%d) = %d\n", dwCount, m_dwWriteTick);
+		//		SYSLOG(System, logMessage);
+		//	}
+		//	else
+		//	{
+		//		printf("MOD_ForceTcpClientMultiCoils ret = %d\n", lRet);
+		//	}
+		//}
+	}
+}
+
+

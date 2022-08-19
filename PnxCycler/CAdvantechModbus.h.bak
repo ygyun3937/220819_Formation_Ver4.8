@@ -1,0 +1,41 @@
+#pragma once
+
+#include "./include/ADSMOD.h"
+
+class CAdvantechModbus
+{
+public:
+	CAdvantechModbus();
+	virtual ~CAdvantechModbus();
+
+private:
+	bool	Initialize();
+	void	Dispose();
+
+	bool	InitializeVariables();
+
+public:
+	int		OpenModbus(CString strIpAddRess, int nPort);
+	int		CloseModbus();
+
+	int		ConnectServer();
+	int		DisconnectServer();
+
+private:
+	bool	StartThread();
+	bool	StopThread();
+
+	static UINT	MeasureDeviceThread(LPVOID pParam);
+	void		MeasureDevice();
+	
+private:
+	CWinThread*		m_pMeasureThread;
+	bool			m_bLoopMeasure;
+
+	CString m_strIpAddress;
+	int		m_nPort;
+
+	unsigned long	m_ulClientHandle;
+
+};
+

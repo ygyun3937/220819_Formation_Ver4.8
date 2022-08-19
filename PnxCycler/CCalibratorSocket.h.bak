@@ -1,0 +1,49 @@
+#pragma once
+
+#define WM_SOCKET_CONNECT		WM_USER+1
+#define WM_SOCKET_RECEIVE		WM_USER+2
+#define WM_SOCKET_DISCLOSE		WM_USER+3		// 소켓연결이 끊혔을때	
+#define WM_RECEIVE_DATA			WM_USER+4		// 데이터 받았을 시
+#define WM_SOCKET_CLOSE			WM_USER+5		// 소켓을 종료할때
+#define WM_SEND_DATA			WM_USER+6
+#define WM_SOCKET_ACCEPT		WM_USER+7
+
+#define SOCKET_TRANSACTION_TIME_OUT  10000		//Connect TimeOut
+
+class CCalibratorSocket : public CSocket
+{
+public:
+	CCalibratorSocket();
+	virtual ~CCalibratorSocket();
+
+public:
+	virtual void OnAccept(int nErrorCode);
+	virtual void OnConnect(int nErrorCode);
+
+	virtual void OnReceive(int nErrorCode);
+	virtual void OnClose(int nErrorCode);
+
+	// ----------------------------------------------------------------------------
+
+	int Send(const void *lpBuf, int nBufLen, int nFlags = 0);
+
+	virtual void StartTimeout();	//TimeOut Start
+	virtual void EndTimeout();		//DisConnect TimeOut
+
+	virtual BOOL OnMessagePending();
+
+public:
+	void SetHWND(HWND hWnd) { m_pHwnd = hWnd; }
+	void SetClientNo(long nClientNum = -1) { m_ClientNo = nClientNum; }
+	void SetTimeoutUsable(bool setValue) { m_bTimeoutUsable = setValue; }
+
+private:
+	// Message Send HWND
+	HWND m_pHwnd;
+	long m_ClientNo;
+
+	// Timeout 관련
+	bool	m_bTimeoutUsable;
+	DWORD	m_dwTick;
+};
+

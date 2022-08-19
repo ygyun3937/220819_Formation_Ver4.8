@@ -1,0 +1,308 @@
+#include "stdafx.h"
+#include "CAjinIoControl.h"
+
+#include "AXL.h"
+#include "AXD.h"
+#include "AXA.h"
+#include "defineIO.h"		//Ajin I/O
+
+/**
+ * .
+ *
+ * METHOD_NAME : CAjinIoControl
+ * METHOD_TYPE : -
+ * DESCRIPTION :
+ */
+CAjinIoControl::CAjinIoControl()
+{
+
+
+
+}
+
+/**
+ * .
+ *
+ * METHOD_NAME : ~CAjinIoControl
+ * METHOD_TYPE : -
+ * DESCRIPTION :
+ */
+CAjinIoControl::~CAjinIoControl()
+{
+}
+
+/**
+ * .
+ *
+ * METHOD_NAME : Initialize
+ * METHOD_TYPE : -
+ * DESCRIPTION :
+ */
+void CAjinIoControl::Initialize()
+{
+	InitializeMemberVariables();
+
+	if (InitializeLibrary() == TRUE)
+	{
+		m_bInitDIO = TRUE;
+	}
+
+	InitializeIo();
+}
+
+/**
+ * .
+ * 
+ * METHOD_NAME : InitializeMemberVariables
+ * METHOD_TYPE : -
+ * DESCRIPTION : 
+ * \return 
+ */
+BOOL CAjinIoControl::InitializeMemberVariables()
+{
+	m_bInitDIO = FALSE;
+
+	m_iMaxOutput = 0;
+	m_iMaxInput = 0;
+
+	m_pInfo_DIO = NULL;
+	m_pInfo_Input = NULL;
+	m_pInfo_Output = NULL;
+
+	// INPUT
+	for (int inputCount = 0; inputCount < INPUT_TOTAL; inputCount++)
+	{
+		m_bInputIo[inputCount] = FALSE;
+	}
+
+	// OUTPUT
+	for (int outputCount = 0; outputCount < OUTPUT_TOTAL; outputCount++)
+	{
+		m_bOutputIo[outputCount] = FALSE;
+		m_bOutputIoInit[outputCount] = FALSE;
+	}
+
+	return TRUE;
+}
+
+/**
+ * .
+ * 
+ * METHOD_NAME : InitializeIo
+ * METHOD_TYPE : -
+ * DESCRIPTION : 
+ * \return 
+ */
+BOOL CAjinIoControl::InitializeIo()
+{
+	// OUTPUT_LIST
+	// OUTPUT_PROBE_PIN_UP = 0
+	for (int outputCount = OUTPUT_STAGE1_PUSHER_UNIT_DOWN; outputCount < OUTPUT_TOTAL; outputCount++)
+for (int outputCount = OUTPUT_STAGE1_SPARE1; outputCount < OUTPUT_TOTAL; outputCount++)
+	{
+	{
+		if (!WriteOutputIoBit(outputCount, false))
+		{
+			return FALSE;
+		}
+	}
+
+	return TRUE;
+}
+
+/**
+ * .
+ * 
+ * METHOD_NAME : InitializeLibrary
+ * METHOD_TYPE : -
+ * DESCRIPTION : 
+ * \return 
+ */
+BOOL CAjinIoControl::InitializeLibrary()
+{
+	DWORD dRet = 0;
+
+	if (!AxlIsOpened())
+	{
+		dRet = AxlOpen(7);
+		if (dRet != AXT_RT_SUCCESS)
+		{
+			AfxMessageBox(_T("[AJIN] BOARD CONNECTION FAIL."));
+			return FALSE;
+		}
+	}
+
+	Sleep(200);
+
+	return TRUE;
+}
+
+/**
+ * .
+ *
+ * METHOD_NAME : ScanDIoModule
+ * METHOD_TYPE : -
+ * DESCRIPTION : IO MODULE SCAN
+ */
+void CAjinIoControl::ScanDioModule()
+{
+
+}
+
+/**
+ * .
+ *
+ * METHOD_NAME : ReadInputIoBit
+ * METHOD_TYPE : -
+ * DESCRIPTION :
+ * \return
+ */
+BOOL CAjinIoControl::ReadInputIoBit(int addr)
+{
+	if (!IsInitializeLibrary())
+	{
+		return FALSE;
+	}
+
+	bool bVal = true;
+	DWORD bOnOff;
+	int ModuleNum = MODULE_INPORT_START + (addr / MODULE_COUNT);
+	int Offset = addr % MODULE_COUNT;
+
+	AxdiReadInportBit(ModuleNum, Offset, &bOnOff);
+
+	m_bInputIo[(ModuleNum * MODULE_COUNT) + Offset] = bOnOff;
+
+	return bOnOff;
+}
+
+/**
+ * .
+ *
+ * METHOD_NAME : ReadInputIoDword
+ * METHOD_TYPE : -
+ * DESCRIPTION :
+ * \return
+ */
+BOOL CAjinIoControl::ReadInputIoDword()
+{
+	if (!IsInitializeLibrary())
+	{
+		return FALSE;
+	}
+
+	DWORD dw;
+
+	int InModuleCount = (InputList_Hanwha_AJIN::INPUT_TOTAL) / MODULE_COUNT;
+		int InModuleCount = (InputList_DFS_AJIN::INPUT_TOTAL) / MODULE_COUNT;
+
+	for (int i = 0; i < InModuleCount + 1; i++)
+	{
+		if (AXT_RT_SUCCESS != AxdiReadInportDword(i + MODULE_INPORT_START, 0, &dw))
+		{
+			continue;
+		}
+		
+		for (int j = 0; j < MODULE_COUNT; j++)
+		{
+			DWORD dwResult = 0x01 & (dw >> j);				/// 
+			int bRet = dwResult == 0x01 ? TRUE : FALSE;
+			m_bInputIo[(i * MODULE_COUNT) + j] = bRet;		/// = 0x01 & (dw >> j); 이렇게 해도 될거 같은데 나중에 테스트
+		}
+	}
+
+	Sleep(10);
+
+	return TRUE;
+}
+
+/**
+ * .
+ *
+ * METHOD_NAME : ReadOutputIoBit
+ * METHOD_TYPE : -
+ * DESCRIPTION :
+ * \return
+ */
+BOOL CAjinIoControl::ReadOutputIoBit(int addr)
+{
+	if (!IsInitializeLibrary())
+	{
+		return FALSE;
+	}
+	DWORD bOnOff;
+
+	bool bVal = TRUE;
+	int ModuleNum = MODULE_OUTPORT_START + (addr / MODULE_COUNT);
+	int Offset = addr % MODULE_COUNT;
+
+	AxdoReadOutportBit(ModuleNum, Offset, &bOnOff);
+
+	m_bOutputIo[((ModuleNum - MODULE_OUTPORT_START) * MODULE_COUNT) + Offset] = bOnOff;
+
+	return TRUE;
+}
+
+/**
+ * .
+ *
+ * METHOD_NAME : ReadOutputIoDword
+ * METHOD_TYPE : -
+ * DESCRIPTION :
+ * \return
+ */
+BOOL CAjinIoControl::ReadOutputIoDword()
+{
+	if (!IsInitializeLibrary())
+	{
+		return FALSE;
+	}
+
+	DWORD dw;
+	int OutModuleCount = (OutputList_Hanwha_AJIN::OUTPUT_TOTAL) / MODULE_COUNT;
+
+
+	for (int i = 0; i < OutModuleCount + 1; i++)
+	{
+
+		if (AXT_RT_SUCCESS != AxdoReadOutportDword(i + MODULE_OUTPORT_START, 0, &dw))
+			continue;
+
+		for (int j = 0; j < MODULE_COUNT; j++)
+		{
+			DWORD dwResult = 0x01 & (dw >> j);
+			int bRet = dwResult == 0x01 ? TRUE : FALSE;
+			m_bOutputIo[(i * MODULE_COUNT) + j] = bRet;
+		}
+	}
+	return TRUE;
+}
+
+BOOL CAjinIoControl::WriteOutputIoBit(int addr, BOOL OnOff)
+{
+	if (!IsInitializeLibrary())
+	{
+		return FALSE;
+	}
+
+	bool bVal = true;
+	DWORD OutPort;
+	int ModuleNum = MODULE_OUTPORT_START + (addr / MODULE_COUNT);
+	int Offset = addr % MODULE_COUNT;
+
+	DWORD dw = AxdoWriteOutportBit(ModuleNum, Offset, OnOff);
+	if (AXT_RT_SUCCESS != dw)
+	{
+		return FALSE;
+	}
+	AxdoReadOutportBit(ModuleNum, Offset, &OutPort);
+
+	if (OnOff == (BOOL)OutPort)
+	{
+		return TRUE;
+	}
+	else
+	{
+		return FALSE;
+	}
+}

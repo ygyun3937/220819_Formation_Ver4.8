@@ -1,0 +1,199 @@
+﻿// CDlgEditCycler.cpp: 구현 파일
+//
+
+#include "stdafx.h"
+#include "PnxCycler.h"
+#include "CDlgEditCycler.h"
+#include "afxdialogex.h"
+#include "MgrConfig.h"
+
+#define SkiCyclerDefaultFilePath		(_T("D:\\Log"))
+#define SkiCyclerDefaultSchedulePath	(_T("D:\\Schedule"))
+
+// CDlgEditCycler 대화 상자
+
+IMPLEMENT_DYNAMIC(CDlgEditCycler, CDialogEx)
+
+CDlgEditCycler::CDlgEditCycler(CWnd* pParent /*=nullptr*/)
+	: CDialogEx(IDD_DLG_EDIT_CYCLER, pParent)
+{
+
+}
+
+CDlgEditCycler::~CDlgEditCycler()
+{
+}
+
+void CDlgEditCycler::DoDataExchange(CDataExchange* pDX)
+{
+	CDialogEx::DoDataExchange(pDX);
+}
+
+
+BEGIN_MESSAGE_MAP(CDlgEditCycler, CDialogEx)
+	ON_WM_SHOWWINDOW()
+	ON_BN_CLICKED(IDC_BTN_EDIT_CYCLER_DEFAULT, &CDlgEditCycler::OnBnClickedBtnEditCyclerDefault)
+	ON_BN_CLICKED(IDC_BTN_EDIT_CYCLER_SAVE, &CDlgEditCycler::OnBnClickedBtnEditCyclerSave)
+	ON_BN_CLICKED(IDC_BTN_EDIT_CYCLER_1, &CDlgEditCycler::OnBnClickedBtnEditCycler1)
+	ON_BN_CLICKED(IDC_BTN_EDIT_CYCLER_2, &CDlgEditCycler::OnBnClickedBtnEditCycler2)
+END_MESSAGE_MAP()
+
+
+// CDlgEditCycler 메시지 처리기
+
+
+BOOL CDlgEditCycler::Create(CWnd* pParentWnd)
+{
+	return CDialogEx::Create(IDD, pParentWnd);
+}
+
+
+BOOL CDlgEditCycler::PreTranslateMessage(MSG* pMsg)
+{
+	if (WM_KEYDOWN == pMsg->message)
+	{
+		if (VK_RETURN == pMsg->wParam || VK_ESCAPE == pMsg->wParam)
+		{
+			return TRUE;
+		}
+	}
+
+	return CDialogEx::PreTranslateMessage(pMsg);
+}
+
+
+void CDlgEditCycler::OnShowWindow(BOOL bShow, UINT nStatus)
+{
+	CDialogEx::OnShowWindow(bShow, nStatus);
+
+	// TODO: 여기에 메시지 처리기 코드를 추가합니다.
+	if (TRUE == bShow)
+	{
+		CenterWindow();
+
+		LoadFilePath();
+	}
+}
+
+
+void	CDlgEditCycler::LoadFilePath()
+{
+	CMgrConfig* pMgr = CMgrConfig::GetMgr();
+
+	if (pMgr)
+	{
+		GetDlgItem(IDC_EDIT_EDIT_CYCLER_1)->SetWindowText(pMgr->GetLogFilePath());
+		GetDlgItem(IDC_EDIT_EDIT_CYCLER_2)->SetWindowText(pMgr->GetSchedulePath());
+	}
+}
+
+void CDlgEditCycler::OnBnClickedBtnEditCyclerDefault()
+{
+	GetDlgItem(IDC_EDIT_EDIT_CYCLER_1)->SetWindowText(SkiCyclerDefaultFilePath);
+	GetDlgItem(IDC_EDIT_EDIT_CYCLER_2)->SetWindowText(SkiCyclerDefaultSchedulePath);
+}
+
+
+void CDlgEditCycler::OnBnClickedBtnEditCyclerSave()
+{
+	CMgrConfig* pMgr = CMgrConfig::GetMgr();
+
+	if (!pMgr)
+		return;
+
+	{
+		CString strValue;
+		GetDlgItem(IDC_EDIT_EDIT_CYCLER_1)->GetWindowText(strValue);
+
+		if (strValue.IsEmpty())
+		{
+			AfxMessageBox("The resulting file path could not be saved because it was not specified.");
+
+			return;
+		}
+
+		pMgr->SetCyclerLogFilePath(strValue);
+	}
+
+	{
+		CString strValue;
+		GetDlgItem(IDC_EDIT_EDIT_CYCLER_2)->GetWindowText(strValue);
+
+		if (strValue.IsEmpty())
+		{
+			AfxMessageBox("The schedule file path was not specified and could not be saved.");
+
+			return;
+		}
+
+		pMgr->SetCyclerSchedulePath(strValue);
+
+	}
+
+	pMgr->SetErrorFilePath(false);
+	pMgr->SaveCommon();
+
+	CDialogEx::OnOK();
+}
+
+
+void CDlgEditCycler::OnBnClickedBtnEditCycler1()
+{
+	CString strFilePath;
+	GetDlgItem(IDC_EDIT_EDIT_CYCLER_1)->GetWindowText(strFilePath);
+
+	BROWSEINFO sBrowserInfo;
+	::ZeroMemory(&sBrowserInfo, sizeof(BROWSEINFO));
+
+	TCHAR szFilePath[_MAX_PATH] = _T("");
+
+	sBrowserInfo.hwndOwner = NULL;
+	sBrowserInfo.pidlRoot = NULL;
+	sBrowserInfo.pszDisplayName = szFilePath;
+	sBrowserInfo.lpszTitle = _T("Choose a Save path");
+	sBrowserInfo.ulFlags = BIF_NEWDIALOGSTYLE | BIF_EDITBOX | BIF_RETURNONLYFSDIRS;
+	sBrowserInfo.lpfn = BrowseCalbackProc;
+	sBrowserInfo.lParam = (LPARAM)strFilePath.GetBuffer(strFilePath.GetLength());
+
+	LPITEMIDLIST lpItem = ::SHBrowseForFolder(&sBrowserInfo);
+
+	strFilePath.ReleaseBuffer();
+
+	if (lpItem)
+	{
+		SHGetPathFromIDList(lpItem, szFilePath);
+
+		((CEdit*)GetDlgItem(IDC_EDIT_EDIT_CYCLER_1))->SetWindowText(szFilePath);
+	}
+}
+
+
+void CDlgEditCycler::OnBnClickedBtnEditCycler2()
+{
+	CString strFilePath;
+	GetDlgItem(IDC_EDIT_EDIT_CYCLER_2)->GetWindowText(strFilePath);
+
+	BROWSEINFO sBrowserInfo;
+	::ZeroMemory(&sBrowserInfo, sizeof(BROWSEINFO));
+
+	TCHAR szFilePath[_MAX_PATH] = _T("");
+
+	sBrowserInfo.hwndOwner = NULL;
+	sBrowserInfo.pidlRoot = NULL;
+	sBrowserInfo.pszDisplayName = szFilePath;
+	sBrowserInfo.lpszTitle = _T("Choose a Save path");
+	sBrowserInfo.ulFlags = BIF_NEWDIALOGSTYLE | BIF_EDITBOX | BIF_RETURNONLYFSDIRS;
+	sBrowserInfo.lpfn = BrowseCalbackProc;
+	sBrowserInfo.lParam = (LPARAM)strFilePath.GetBuffer(strFilePath.GetLength());
+
+	LPITEMIDLIST lpItem = ::SHBrowseForFolder(&sBrowserInfo);
+
+	strFilePath.ReleaseBuffer();
+
+	if (lpItem)
+	{
+		SHGetPathFromIDList(lpItem, szFilePath);
+
+		((CEdit*)GetDlgItem(IDC_EDIT_EDIT_CYCLER_2))->SetWindowText(szFilePath);
+	}
+}

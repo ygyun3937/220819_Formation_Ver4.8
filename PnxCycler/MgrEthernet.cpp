@@ -1,0 +1,185 @@
+#include "stdafx.h"
+#include "MgrEthernet.h"
+
+#include "MgrComm.h"
+#include "resource.h"
+
+#ifdef _DEBUG
+#define new DEBUG_NEW
+#undef THIS_FILE
+static char THIS_FILE[] = __FILE__;
+#endif
+
+
+CMgrEthernet::CMgrEthernet()
+{
+	CMgrComm* pMgr = CMgrComm::GetMgr();
+
+	if (!pMgr)
+		return;
+
+	std::vector<SDevice*> vecValue;
+	pMgr->GetDeivceFromType(eDeviceTypeIFBoard, vecValue);
+
+	auto iter = vecValue.begin();
+	auto iterE = vecValue.end();
+
+	while (iter != iterE)
+	{
+		SDevice* lpDevice = (*iter);
+
+		if (lpDevice)
+		{
+			CCommEthernet* pEthernet = new CCommEthernet;
+
+			pEthernet->SetBoardIndex(lpDevice->nIndex);
+			pEthernet->SetCommType(eDeviceTypeIFBoard);
+			m_mapEthernet.insert(std::pair< int, CCommEthernet* >(lpDevice->nPrimaryKey, pEthernet));
+
+			/*for (int i = 0; i < lpDevice->arrChannel.GetSize(); ++i)
+			{
+				int nPrimaryKey = lpDevice->nPrimaryKey + i;
+
+				auto it = m_mapEthernet.find(nPrimaryKey);
+
+				if (it == m_mapEthernet.end())
+				{
+					CCommEthernet* pEthernet = new CCommEthernet;
+
+					pEthernet->SetBoardIndex(lpDevice->nIndex);
+					pEthernet->SetCommType(eDeviceTypeIFBoard);
+
+					m_mapEthernet.insert(std::pair< int, CCommEthernet* >(nPrimaryKey, pEthernet));
+				}
+			}*/
+		}
+
+		++iter;
+	}
+
+	pMgr->GetDeivceFromType(eDeviceTypePlcInterface, vecValue);
+
+	iter = vecValue.begin();
+	iterE = vecValue.end();
+
+	while (iter != iterE)
+	{
+		SDevice* lpDevice = (*iter);
+
+		if (lpDevice)
+		{
+			CCommEthernet* pEthernet = new CCommEthernet;
+
+			pEthernet->SetCommType(lpDevice->nCommObj);
+			m_mapEthernet.insert(std::pair< int, CCommEthernet* >(lpDevice->nPrimaryKey, pEthernet));						
+		}
+
+		++iter;
+	}
+}
+
+
+CMgrEthernet::~CMgrEthernet()
+{
+	RemoveAll();
+}
+
+void	CMgrEthernet::StartThread()
+{
+	for (auto it = m_mapEthernet.begin(); it != m_mapEthernet.end(); ++it)
+	{
+		CCommEthernet* pComm = it->second;
+
+		if (pComm)
+			pComm->StartThread();
+	}
+}
+
+void	CMgrEthernet::StopThread()
+{
+	for (auto it = m_mapEthernet.begin(); it != m_mapEthernet.end(); ++it)
+	{
+		CCommEthernet* pComm = it->second;
+
+		if (pComm)
+			pComm->StopThread();
+	}
+}
+
+void	CMgrEthernet::AddQueue(int nPrimaryKey, CString strTime, BYTE* pszData, int nSize)
+{
+	CCommEthernet* pEthernet = GetAt(nPrimaryKey);
+
+	if (pEthernet)
+	{
+		TRY
+		{
+			TEthernet* pComm = new TEthernet;
+			int nStackSize = sizeof(pComm->pszComm);
+			ZeroMemory(pComm->pszComm, nStackSize);
+			memset(pComm->pszComm, NULL, sizeof(pComm->pszComm));
+
+			pComm->nBoardNumber = pEthernet->GetBoardIndex();
+			pComm->strTime = strTime;
+			pComm->nSize = nSize;
+
+			if(nStackSize > nSize)
+				memcpy(pComm->pszComm, pszData, nSize);
+			else
+				memcpy(pComm->pszComm, pszData, nStackSize);
+
+			pEthernet->AddQueue(pComm);
+		}
+		CATCH(CMemoryException, e)
+		{
+			char err_msg[1024];
+			e->GetErrorMessage(err_msg, 1024);
+			
+			SYSLOG(Dbg, "[PK_ERROR]  CMgrEthernet::AddQueue Error - %s", err_msg);
+			CWnd* pWnd = AfxGetApp()->GetMainWnd();
+			if (pWnd)
+				pWnd->PostMessage(WM_COMMAND, ID_MENU_MAIN_CMD_PAUSE_1_KOR,  0);
+		}
+		END_TRY
+	}
+}
+
+void	CMgrEthernet::AddQueue(int nPrimaryKey, CString strTime, CString strData, int nSize)
+{
+	CCommEthernet* pEthernet = GetAt(nPrimaryKey);
+
+	if (pEthernet)
+	{
+		TEthernet* pComm = new TEthernet;
+
+		memset(pComm->pszComm, NULL, sizeof(pComm->pszComm));
+
+		pComm->nBoardNumber = pEthernet->GetBoardIndex();
+		pComm->strTime		= strTime;
+		pComm->strData		= strData;
+		pComm->nSize = nSize;
+
+		pEthernet->AddQueue(pComm);
+	}
+}
+
+CCommEthernet*	CMgrEthernet::GetAt(int nPrimaryKey)
+{
+	auto it = m_mapEthernet.find(nPrimaryKey);
+
+	if (it == m_mapEthernet.end())
+		return NULL;
+
+	return it->second;
+}
+
+
+void	CMgrEthernet::RemoveAll()
+{
+	for (auto it = m_mapEthernet.begin(); it != m_mapEthernet.end(); ++it)
+	{
+		delete it->second;
+	}
+
+	m_mapEthernet.clear();
+}

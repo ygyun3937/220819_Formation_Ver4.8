@@ -1,0 +1,388 @@
+#include "stdafx.h"
+#include "CCalibratorProcess.h"
+
+#include "MgrConfig.h"
+
+#include "PnxUtil.h"
+#include "Math.h"
+
+#define CONST_CALIBRATOR_TCP_LOCAL_IP	_T("127.0.0.1")
+#define CONST_CALIBRATOR_TCP_PORT		5025
+
+CCalibratorProcess::CCalibratorProcess()
+{
+	//Initialize();
+}
+
+CCalibratorProcess::~CCalibratorProcess()
+{
+	Dispose();
+}
+
+// -------------------------------------------------------------------------------------------------
+
+bool CCalibratorProcess::Initialize()
+{
+	InitializeVariables();
+
+	return false;
+}
+
+bool CCalibratorProcess::InitializeVariables()
+{
+	m_strCalibratorIP = CMgrConfig::GetMgr()->GetCalibratorIp();
+	m_nCalibratorPort = CMgrConfig::GetMgr()->GetCalibratorPort();
+
+	m_pMeasureThread = NULL;
+	m_bLoopMeasure = true;
+
+	//m_AsyncSocket = new CCalibratorSocket();
+	m_SyncSocket.SetHWND(m_hWnd);
+	m_SyncSocket.SetClientNo(0);
+
+	return true;
+}
+
+bool CCalibratorProcess::Dispose()
+{
+	DisconnectDevice();
+	StopThread();
+
+	return true;
+}
+
+// -------------------------------------------------------------------------------------------------
+
+int CCalibratorProcess::OpenSocket()
+{
+	if (m_SyncSocket == NULL)
+	{
+		SYSLOG(Err, _T("[CALBRATOR][COMM I/F] Open Fail. 'm_SyncSocket' is null."));
+		return -1;
+	}
+
+	m_SyncSocket.Close();
+	bool resultValue = m_SyncSocket.Create();
+
+	return 0;
+}
+
+int CCalibratorProcess::OpenSocket(CString strIpAddress)
+{
+	m_strCalibratorIP = strIpAddress;
+	if (m_SyncSocket == NULL)
+	{
+		SYSLOG(Err, _T("[CALBRATOR][COMM I/F] Open Fail. 'm_SyncSocket' is null."));
+		return -1;
+	}
+
+	m_SyncSocket.Close();
+	bool resultValue = m_SyncSocket.Create();
+
+	return 0;
+}
+
+int CCalibratorProcess::CloseSocket()
+{
+	if (m_SyncSocket == NULL)
+	{
+		SYSLOG(Err, _T("[CALBRATOR][COMM I/F] Close Fail. 'm_SyncSocket' is null."));
+		return -1;
+	}
+
+	m_SyncSocket.Close();
+
+	closesocket((SOCKET)m_SyncSocket);
+
+	return true;
+}
+
+bool CCalibratorProcess::ConnectDevice()
+{
+	CString logMessage;
+
+	if (m_strCalibratorIP.GetLength() == 0)
+	{
+		SYSLOG(Err, _T("[CALBRATOR][COMM I/F] IP Address Error."));
+	}
+
+	bool resultValue = m_SyncSocket.Connect(m_strCalibratorIP, m_nCalibratorPort);
+	if (!resultValue)
+	{
+		logMessage.Format(_T("[CALBRATOR][COMM I/F] Connection Failed. IP_ADDRESS='%s', PORT='%d'"), m_strCalibratorIP, m_nCalibratorPort);
+		SYSLOG(Err, logMessage);
+
+		m_SyncSocket.Close();
+		return false;
+	}
+
+	logMessage.Format(_T("[CALBRATOR][COMM I/F] Connection Successed. IP_ADDRESS='%s', PORT='%d'"), m_strCalibratorIP, m_nCalibratorPort);
+	SYSLOG(Operation, logMessage);
+
+	// -------------------------------------------------------------------------
+
+	int nError = WSAGetLastError();
+	if (nError == 0)
+	{
+		CWnd* pWnd = AfxGetApp()->GetMainWnd();
+		WSAAsyncSelect(m_SyncSocket, pWnd->GetSafeHwnd(), WM_SOCKET_EVENT_CALIBRATOR, FD_CONNECT);
+
+		// GET DATA
+		GetCalibratorMeasureVoltage();
+
+		StartThread();
+
+		return true;
+	}
+
+	return false;
+}
+
+bool CCalibratorProcess::DisconnectDevice()
+{
+	CloseSocket();
+
+	return true;
+}
+
+bool CCalibratorProcess::StartThread()
+{
+	if (m_pMeasureThread == NULL)
+	{
+		m_pMeasureThread = AfxBeginThread(CalibratorMeasureThread, this);
+	}
+
+	return true;
+}
+
+bool CCalibratorProcess::StopThread()
+{
+	m_bLoopMeasure = FALSE;
+
+	if (m_pMeasureThread)
+	{
+		::WaitForSingleObject(m_pMeasureThread->m_hThread, INFINITE);
+		m_pMeasureThread = NULL;
+	}
+
+	return true;
+}
+
+UINT CCalibratorProcess::CalibratorMeasureThread(LPVOID pParam)
+{
+	CCalibratorProcess* pCalibratorProc = (CCalibratorProcess*)pParam;
+	if (!pCalibratorProc)
+	{
+		return 0;
+	}
+
+	while (pCalibratorProc->m_bLoopMeasure)
+	{
+		pCalibratorProc->MeasureCalibrator();
+		Sleep(1);
+	}
+
+	return 0;
+}
+
+void CCalibratorProcess::MeasureCalibrator()
+{
+	while (m_bLoopMeasure)
+	{
+		switch (m_nMeasureData)
+		{
+		case elFBoradStepModeAutocalVoltage:
+
+			m_fCalibratorVoltage = GetCalibratorMeasureVoltage();
+			if (m_nMeasureCount > 2 && m_nMeasureCount < 7)
+			{
+				m_fCalibratorVoltageAvg += m_fCalibratorVoltage;
+			}
+			else if (m_nMeasureCount == 0)
+			{
+				m_fCalibratorVoltageAvg = 0;
+			}
+			m_nMeasureCount++;
+			break;
+
+		case elFBoradStepModeAutocalCurrent:
+
+			m_fCalibratorAmpere = GetCalibratorMeasureCurrent();
+
+			if (m_nMeasureCount > 4 && m_nMeasureCount < 8)
+			{
+				m_fCalibratorAmpereAvg += fabs(m_fCalibratorAmpere);
+			}
+			else if (m_nMeasureCount == 0)
+			{
+				m_fCalibratorAmpereAvg = 0;
+			}
+			m_nMeasureCount++;
+			break;
+
+		case 0:
+			//int nError = WSAGetLastError();
+			//if (nError != 0)
+			//{ 
+			//	//m_SyncSocket->GetSockOpt(,,); 
+			//}
+			//Sleep(1);
+			break;
+
+		default:
+			break;
+		}
+	}
+}
+
+// -------------------------------------------------------------------------------------------------
+
+bool CCalibratorProcess::SendCalibratorCommand(CString strCmd)
+{
+	char buf[1024] = "";
+	int n;
+
+	int len = strCmd.GetLength();;
+	//Sleep(100);
+	if (!strCmd.IsEmpty())
+	{
+		strcpy(buf, strCmd);
+		int nError = WSAGetLastError();
+		if (m_bLoopMeasure == FALSE || m_SyncSocket.m_hSocket == NULL || nError != 0)
+		{
+			return false;
+		}
+
+		try
+		{
+			n = m_SyncSocket.Send(buf, len, 0);
+		}
+		catch (exception e)
+		{
+		}
+
+		Sleep(400);
+		if (n == -1)
+		{
+			strCmd.Format(_T("Data Send fails"));
+		}
+
+		return true;
+	}
+	else
+	{
+		return false;
+	}
+}
+
+CString CCalibratorProcess::ReceiveCalibratorCommand()
+{
+	if (m_SyncSocket == NULL)
+		return _T("");
+
+	char *pBuf = new char[1024];
+	int iRecv = 0;
+	CString strDATA = "";
+
+	ZeroMemory(pBuf, sizeof(pBuf));
+	Sleep(300);
+	int nError = WSAGetLastError();
+	if (m_bLoopMeasure == FALSE || m_SyncSocket.m_hSocket == NULL || nError != 0)
+		return "";
+
+	try
+	{
+		m_SyncSocket.SetTimeoutUsable(true);
+		m_SyncSocket.StartTimeout();
+
+		iRecv = m_SyncSocket.Receive(pBuf, 1024, 0);
+
+		m_SyncSocket.SetTimeoutUsable(false);
+		m_SyncSocket.EndTimeout();
+		
+		if (sizeof(pBuf) < 0)
+		{
+			return "";
+		}
+	}
+	catch (exception e)
+	{
+	}
+
+	if (iRecv == SOCKET_ERROR) //오류 발생일때..
+	{
+		//GetLastError()함수를 통해 상세 오류 코드를 검색한다.
+		int err = m_SyncSocket.GetLastError();
+	}
+
+	strDATA = pBuf;
+
+	delete pBuf;
+	return strDATA;
+}
+
+float CCalibratorProcess::GetCalibratorAverageDataCount(int nCount)
+{
+	CString strCnt = "";
+	float fRecv = 0.0;
+	bool bDmm = false;
+
+	bDmm = SendCalibratorCommand(_T("CONF:VOLT 5\n"));
+	strCnt.Format(_T("%d"), nCount);
+	bDmm = SendCalibratorCommand(_T("SAMP:COUN ") + strCnt + _T("\n"));
+	bDmm = SendCalibratorCommand(_T("CALC:AVER:STAT ON\n"));
+
+	bDmm = SendCalibratorCommand(_T("INIT\n"));
+	bDmm = SendCalibratorCommand(_T("*WAI\n"));
+	bDmm = SendCalibratorCommand(_T("CALC:AVER:ALL?\n"));
+
+	fRecv = atof(ReceiveCalibratorCommand());
+
+	if (bDmm == false)
+	{
+		fRecv = 0.0;
+	}
+	return fRecv;
+}
+
+float CCalibratorProcess::GetCalibratorMeasureVoltage()
+{
+	float fRecv = 0.0;
+	bool resultValue = false;
+
+	//CString command = _T("MEAS:VOLT:DC?\n");
+	CString command = _T("MEAS:VOLT DC?");
+
+	resultValue = SendCalibratorCommand(command);
+	if (resultValue)
+	{
+		//0.00000001 /// * 0.0001해야함 
+		fRecv = atof(ReceiveCalibratorCommand()) * 10000 * 1000;
+	}
+	else
+	{
+		fRecv = 0.0;
+	}
+
+	// HW팀에서 절대값으로 요청
+	return fRecv;
+}
+
+float CCalibratorProcess::GetCalibratorMeasureCurrent()
+{
+	float fRecv = 0.0;
+	bool bDmm = false;
+
+	//bDmm = SendCalibratorCommand(_T("MEAS:VOLT:DC?\n"));
+	bDmm = SendCalibratorCommand(_T("MEAS:VOLT DC?\n"));
+	if (bDmm)
+	{
+		fRecv = (atof(ReceiveCalibratorCommand()) / m_fShunt) * 1000;
+	}
+	else
+	{
+		fRecv = 0.0;
+	}
+
+	return fRecv;
+}

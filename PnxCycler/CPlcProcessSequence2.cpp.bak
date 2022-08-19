@@ -1,0 +1,499 @@
+
+#include "stdafx.h"
+#include "PnxCycler.h"
+#include "CPlcProcessSequence2.h"
+
+#include "MgrStatus.h"
+#include "MgrConfig.h"
+#include "MgrPCan.h"
+#include "CMgrModel.h"
+#include "CMgrAccount.h"
+
+#include "MgrChannel.h"
+#include "CDlgViewPlc2.h"
+#include "CDlgViewplcManual.h"
+
+CPlcProcessSequence2::CPlcProcessSequence2()
+{
+	m_ePressRunStepCurrent = (enumProcessStepAuto2)0;
+
+	ZeroMemory(m_PlcAndPcStatus, 12);
+
+	m_bThreadLife = FALSE;
+	m_bInitCheckFlag = FALSE;
+
+	m_SendBlockTimeCheck = 0;
+	m_SendTimeCheck = 0;
+	m_ReadTimeCheck = 0;
+	m_ReadAlarmCount = 0;
+	m_PLCAlarmFlag = FALSE;
+
+	//Test
+	m_RunStopFlag = FALSE;
+	m_PlcWaitTime = 0;
+
+
+}
+
+CPlcProcessSequence2::~CPlcProcessSequence2()
+{
+}
+
+void CPlcProcessSequence2::ThreadRun(void)
+{
+	if (m_bThreadLife)
+		return;
+
+	m_bThreadLife = true;
+
+	m_pThread = AfxBeginThread(threadFunction, this);
+}
+
+void CPlcProcessSequence2::ThreadStop(void)
+{
+	m_bThreadLife = FALSE;
+	//m_pThread = NULL;
+
+	if (m_pThread != NULL)
+	{
+		DWORD exitcode = ::WaitForSingleObject(m_pThread->m_hThread, 1000);
+		if (exitcode == WAIT_TIMEOUT)
+			::TerminateThread(m_pThread->m_hThread, exitcode);
+		m_pThread = NULL;
+	}
+}
+
+// -----------------------------------------------------------------------------
+
+UINT CPlcProcessSequence2::threadFunction(LPVOID pParam)
+{
+	CPlcProcessSequence2* pThis = (CPlcProcessSequence2*)pParam;
+
+	while (pThis->m_bThreadLife)
+	{
+		pThis->threadJob();
+		Sleep(10);
+	}
+
+	return 0;
+}
+
+void CPlcProcessSequence2::threadJob(void)
+{
+	doRunStep();
+}
+
+// -----------------------------------------------------------------------------
+
+void CPlcProcessSequence2::doRunStep()
+{
+	CDlgViewPlc2* pDlgViewPlc2 = CDlgViewPlc2::GetMgr();
+
+	if (pDlgViewPlc2 == NULL)
+		return;
+	//PLC Check 1Sec
+	SetSendHeartBit();
+	GetReadHeartBit();
+
+	if (m_PLCAlarmFlag != TRUE)
+	{
+		SendPlcBlockData();
+		AutoRun();
+	}
+
+}
+
+
+
+void CPlcProcessSequence2::AutoRun()
+{
+	CDlgViewPlc2* pDlgViewPlc2 = CDlgViewPlc2::GetMgr();
+	CMgrModel* pMgrModel = CMgrModel::GetMgr();
+	CMgrPCan* pMgr = CMgrPCan::GetMgr();
+	CMgrChannel* pMgrChannel = CMgrChannel::GetMgr();
+	int nPlcWaitTimeMax = 1000;
+	if (pMgr->GetAlarmStatus() == true)
+
+	{
+		CString str;
+		long lBitStatus;
+			lBitStatus = BIT_ON;
+
+		pDlgViewPlc2->m_StPlcDataParam2[TYPE_SEND_EMO].lPlcData = lBitStatus;
+		pDlgViewPlc2->PLC_SendProcessData();
+
+	}
+	else
+	{
+		CString str;
+		long lBitStatus;
+
+
+		lBitStatus = BIT_OFF;
+
+		pDlgViewPlc2->m_StPlcDataParam2[TYPE_SEND_EMO].lPlcData = lBitStatus;
+		pDlgViewPlc2->PLC_SendProcessData();
+	}
+	if (pDlgViewPlc2->m_StPlcDataParam2[TYPE_PLC_EMO].lPlcData == BIT_ON)
+		return;
+
+	if (pDlgViewPlc2->m_StPlcDataParam2[TYPE_READ_PLC_ALARM_OCCUR].lPlcData == BIT_ON)
+		return;
+
+	//TEST
+	if (m_RunStopFlag == FALSE)
+		return;
+
+	if (0)//CMgrStatus::GetMgr()->GetEqp_Stage1_RunMode() != EQP_RUN_MODE_AUTO)
+		return;
+
+	switch (m_ePressRunStepCurrent)
+	{
+		//초기화
+	case AUTO_INIT:
+	{
+		break;
+	}
+	case AUTO_STEP_INIT:
+	{
+		pDlgViewPlc2->PlcDataInit();
+		pDlgViewPlc2->PlcDataBlockInit();
+		pDlgViewPlc2->PLC_SendProcessData();
+
+		SetAutoStep(AUTO_PLC_READY);
+		break;
+	}
+
+	//PLC -> PC READY
+	case AUTO_PLC_READY:
+	{
+		if (m_RunStopFlag == TRUE) {
+			m_PlcWaitTime++;
+			if (m_PlcWaitTime < (nPlcWaitTimeMax / 5)) {
+				break;
+			}
+		}
+
+		if (pDlgViewPlc2->m_StPlcDataParam2[TYPE_READ_READY].lPlcData != BIT_ON)
+			break;
+
+
+		m_PlcWaitTime = 0;
+		SetAutoStep(AUTO_PLC_READY_CHECK);
+		break;
+	}
+	case AUTO_PLC_READY_CHECK:
+	{
+		SetAutoStep(AUTO_PC_PROCESS_START);
+		break;
+	}
+
+	//PC -> PLC PROCESS_START	
+	case AUTO_PC_PROCESS_START:
+	{
+		//모델 선택 확인
+		SModel* lpModel = pMgrModel->GetModel(pMgrModel->GetModelIndex());
+		//스케줄 선택 확인
+		SSchedule* lpSchedule = lpModel->GetSchedule(pMgrModel->GetScheduleIndex());
+		if (lpSchedule&& lpModel)
+		{
+			pDlgViewPlc2->m_StPlcDataParam2[TYPE_SEND_PROCESS_START].lPlcData = BIT_ON;
+			SetAutoStep(AUTO_PC_PROCESS_START_CHECK);
+		}
+
+		break;
+	}
+	case AUTO_PC_PROCESS_START_CHECK:
+	{
+		pDlgViewPlc2->PLC_SendProcessData();
+		SetAutoStep(AUTO_PLC_LOAD_COMPLETE);
+		break;
+	}
+
+	//PLC -> PC LOAD_COMPLETE	
+	case AUTO_PLC_LOAD_COMPLETE:
+	{
+		//[JMW:220325]	//time limit Alarm add
+		if (pDlgViewPlc2->Timerflag) {
+			pDlgViewPlc2->SetKillScheduleTimer(TRUE);		// TRUE : SetTimer, FALSE : KillTimer
+			pDlgViewPlc2->Timerflag = FALSE;
+		}
+
+		if (pDlgViewPlc2->ScheduleTime < 10) {	// 5 Sec
+			if (pDlgViewPlc2->m_StPlcDataParam2[TYPE_PLC_LOAD_COMPLETE].lPlcData != BIT_ON)
+			{
+				if (pDlgViewPlc2->m_StPlcDataParam2[TYPE_SEND_PROCESS_START].lPlcData != BIT_ON) {
+					pDlgViewPlc2->SetKillScheduleTimer(FALSE);
+					SetAutoStep(AUTO_PC_PROCESS_START);
+					//Count 확인 필요
+				}
+				break;
+			}
+			pDlgViewPlc2->SetKillScheduleTimer(FALSE);
+			SetAutoStep(AUTO_PLC_LOAD_COMPLETE_CHECK);
+		}
+		else {
+			AfxMessageBox("No PLC2 Load Commplete Signal", MB_ICONINFORMATION);
+			pDlgViewPlc2->SetKillScheduleTimer(FALSE);
+		}
+		break;
+	}
+	case AUTO_PLC_LOAD_COMPLETE_CHECK:
+	{
+		m_PlcWaitTime = 0;
+		SetAutoStep(AUTO_PC_SCHEDULE_START);
+		break;
+	}
+
+	//PC -> PLC SCHEDULE_START
+	case AUTO_PC_SCHEDULE_START:
+	{
+		if (m_RunStopFlag == TRUE) {
+			m_PlcWaitTime++;
+			if (m_PlcWaitTime < (nPlcWaitTimeMax / 2)) {
+				break;
+			}
+		}
+		//Start Check
+		if (pMgrChannel->IsCyclerChannelStarted() != true)
+			break;
+
+		m_PlcWaitTime = 0;
+		//pDlgViewPlc2->m_StPlcDataParam2[TYPE_SEND_PROCESS_START].lPlcData = BIT_OFF;
+		pDlgViewPlc2->m_StPlcDataParam2[TYPE_SEND_SCHEDULE_START].lPlcData = BIT_ON;
+		pDlgViewPlc2->PLC_SendProcessData();
+		SetAutoStep(AUTO_PC_SCHEDULE_START_CHECK);
+		break;
+	}
+	case AUTO_PC_SCHEDULE_START_CHECK:
+	{
+
+		SetAutoStep(AUTO_PC_DATA_SEND);
+		break;
+	}
+
+	//PC -> PLC DATA_SEND V, A , T 
+	case AUTO_PC_DATA_SEND:
+	{
+		if (m_RunStopFlag == TRUE) {
+			m_PlcWaitTime++;
+			if (m_PlcWaitTime < nPlcWaitTimeMax) {
+				break;
+			}
+		}
+		// SCHEDULE END
+		//Finished Check
+		if (pMgrChannel->IsCyclerChannelFinished() != true)
+			break;
+
+		m_PlcWaitTime = 0;
+
+		SetAutoStep(AUTO_PC_DATA_SEND_CHECK);
+		break;
+	}
+	case AUTO_PC_DATA_SEND_CHECK:
+	{
+		//OK / NG
+		//Read Data 
+		//if (0) {
+		//}
+		//else {
+			pDlgViewPlc2->m_StPlcDataParam2[TYPE_SEND_RESULT_PASS].lPlcData = BIT_ON;
+			pDlgViewPlc2->PLC_SendProcessData();
+		//}
+			//Sleep(1000);
+		SetAutoStep(AUTO_PC_SCHEDULE_COMPLETE);
+		break;
+	}
+
+
+	//PC -> PLC SCHEDULE_COMPLETE
+	case AUTO_PC_SCHEDULE_COMPLETE:
+	{
+		if (m_RunStopFlag == TRUE) {
+			m_PlcWaitTime++;
+			if (m_PlcWaitTime < (nPlcWaitTimeMax / 5)) {
+				break;
+			}
+		}
+		//pDlgViewPlc1->m_StPlcDataParam[TYPE_SEND_SCHEDULE_START].lPlcData = BIT_OFF;
+		pDlgViewPlc2->m_StPlcDataParam2[TYPE_SEND_SCHEDULE_COMPLETE].lPlcData = BIT_ON;
+		pDlgViewPlc2->PLC_SendProcessData();
+
+		m_PlcWaitTime = 0;
+		SetAutoStep(AUTO_PC_SCHEDULE_COMPLETE_CHECK);
+		break;
+	}
+	case AUTO_PC_SCHEDULE_COMPLETE_CHECK:
+	{
+		SetAutoStep(AUTO_PLC_UNLOAD_COMPLETE);
+		break;
+	}
+
+	//PLC -> PC UNLOAD_COMPLETE	
+	case AUTO_PLC_UNLOAD_COMPLETE:
+	{
+		if (pDlgViewPlc2->m_StPlcDataParam2[TYPE_PLC_UNLOAD_COMPLETE].lPlcData != BIT_ON)
+			break;
+
+
+		SetAutoStep(AUTO_PLC_UNLOAD_COMPLETE_CHECK);
+		break;
+	}
+	case AUTO_PLC_UNLOAD_COMPLETE_CHECK:
+	{
+		SetAutoStep(AUTO_PLC_PROCESS_END);
+		break;
+	}
+
+	//PC -> PLC PROCESS_END
+	case AUTO_PLC_PROCESS_END:
+	{
+		pDlgViewPlc2->m_StPlcDataParam2[TYPE_SEND_SCHEDULE_COMPLETE].lPlcData = BIT_OFF;
+		pDlgViewPlc2->m_StPlcDataParam2[TYPE_SEND_PROCESS_END].lPlcData = BIT_ON;
+		pDlgViewPlc2->PLC_SendProcessData();
+
+		SetAutoStep(AUTO_PLC_PROCESS_END_CHECK);
+		break;
+	}
+	case AUTO_PLC_PROCESS_END_CHECK:
+	{
+		Sleep(1000);
+
+		pDlgViewPlc2->m_StPlcDataParam2[TYPE_SEND_PROCESS_START].lPlcData = BIT_OFF;
+		pDlgViewPlc2->m_StPlcDataParam2[TYPE_SEND_SCHEDULE_START].lPlcData = BIT_OFF;
+		pDlgViewPlc2->m_StPlcDataParam2[TYPE_SEND_SCHEDULE_COMPLETE].lPlcData = BIT_OFF;
+		pDlgViewPlc2->m_StPlcDataParam2[TYPE_SEND_RESULT_PASS].lPlcData = BIT_OFF;
+		pDlgViewPlc2->m_StPlcDataParam2[TYPE_SEND_PROCESS_END].lPlcData = BIT_OFF;
+
+		pDlgViewPlc2->PLC_SendProcessData();
+		m_RunStopFlag = FALSE;
+		SetAutoStep(AUTO_INIT);
+		break;
+	}
+	//Alarm
+	}
+}
+
+void CPlcProcessSequence2::WaitTime(DWORD dwMillisecond)
+{
+	DWORD dwStart;
+	dwStart = GetTickCount();
+
+	while (GetTickCount() - dwStart < dwMillisecond)
+	{
+		Sleep(10);
+	}
+}
+
+void CPlcProcessSequence2::m_InitCheck()
+{
+}
+
+void CPlcProcessSequence2::SetAutoStep(enumProcessStepAuto2 estepPress)
+{
+	m_ePressRunStepCurrent = estepPress;	// 새로 Step으로 전환
+}
+
+void CPlcProcessSequence2::Init_Seq()
+{
+	SetAutoStep(AUTO_INIT);
+}
+
+void  CPlcProcessSequence2::SetSendHeartBit()
+{
+	CDlgViewPlc2* pDlgViewPlc2 = CDlgViewPlc2::GetMgr();
+
+	int nMaxTime = 100;
+
+	m_SendTimeCheck++;
+
+	if (m_SendTimeCheck > nMaxTime)
+	{
+		m_SendTimeCheck = 0;
+		static BOOL bFlk = FALSE;
+
+		if (!bFlk) {
+			bFlk = TRUE;
+			m_PlcAndPcStatus[TYPE_SEND_HEART_BIT] = BIT_ON;							//[JMW:220314]
+			pDlgViewPlc2->m_StPlcDataParam2[TYPE_SEND_HEART_BIT].lPlcData = 1;
+			pDlgViewPlc2->PLC_WriteDevice(SEND_HEART_BIT, TYPE_SEND_HEART_BIT);
+
+
+			////TEST Bit
+			//m_PlcAndPcStatus[TYPE_READ_HEART_BIT] = BIT_OFF;						//[JMW:220314]
+			//pDlgViewPlc2->m_StPlcDataParam2[TYPE_READ_HEART_BIT].lPlcData = 0;
+			//pDlgViewPlc2->PLC_WriteDevice(READ_HEART_BIT, TYPE_READ_HEART_BIT);
+			//bFlk = TRUE;
+		}
+		else {
+			bFlk = FALSE;
+			m_PlcAndPcStatus[TYPE_SEND_HEART_BIT] = BIT_OFF;						//[JMW:220314]
+			pDlgViewPlc2->m_StPlcDataParam2[TYPE_SEND_HEART_BIT].lPlcData = 0;
+			pDlgViewPlc2->PLC_WriteDevice(SEND_HEART_BIT, TYPE_SEND_HEART_BIT);
+
+			////TEST Bit
+			//m_PlcAndPcStatus[TYPE_READ_HEART_BIT] = BIT_ON;							//[JMW:220314]
+			//pDlgViewPlc2->m_StPlcDataParam2[TYPE_READ_HEART_BIT].lPlcData = 1;
+			//pDlgViewPlc2->PLC_WriteDevice(READ_HEART_BIT, TYPE_READ_HEART_BIT);
+
+		}
+	}
+}
+
+void  CPlcProcessSequence2::GetReadHeartBit()
+{
+	CDlgViewPlc2* pDlgViewPlc2 = CDlgViewPlc2::GetMgr();
+	static BOOL bFlk = FALSE;
+	int nMaxTime = 50;
+	int nMaxAlarmCount = 500;
+
+	m_ReadTimeCheck++;
+	if (m_ReadTimeCheck > nMaxTime)
+	{
+		//Read Process
+		pDlgViewPlc2->PLC_ReadProcessData();
+
+		m_ReadTimeCheck = 0;
+
+		if (!bFlk) {
+			if (pDlgViewPlc2->m_StPlcDataParam2[TYPE_READ_HEART_BIT].lPlcData == 1)
+			{
+				bFlk = TRUE;
+				m_ReadAlarmCount = 0;
+				m_ReadTimeCheck = 0;
+			}
+		}
+		else {
+			if (pDlgViewPlc2->m_StPlcDataParam2[TYPE_READ_HEART_BIT].lPlcData == 0)
+			{
+				bFlk = FALSE;
+				m_ReadAlarmCount = 0;
+				m_ReadTimeCheck = 0;
+			}
+		}
+	}
+
+	m_ReadAlarmCount++;
+	if (m_ReadAlarmCount >= nMaxAlarmCount)
+	{
+		//Alarm Flag On
+		//m_PLCAlarmFlag = TRUE;
+	}
+}
+
+void  CPlcProcessSequence2::SendPlcBlockData()
+{
+	CDlgViewPlc2* pDlgViewPlc2 = CDlgViewPlc2::GetMgr();
+	int nMaxTime = 10;
+	m_SendBlockTimeCheck++;
+	if (m_SendBlockTimeCheck > nMaxTime)
+	{
+		pDlgViewPlc2->PLC_RealNumberWriteDevice2(SEND_V_START_24, PLC_SEND_V_24);//V
+		pDlgViewPlc2->PLC_RealNumberWriteDevice2(SEND_A_START_24, PLC_SEND_A_24);//A
+		pDlgViewPlc2->PLC_RealNumberWriteDevice2(SEND_Ah_START_24, PLC_SEND_Ah_24);//Ah
+		pDlgViewPlc2->PLC_RealNumberWriteDevice2(SEND_T_START_24, PLC_SEND_T_24);//T
+
+		m_SendBlockTimeCheck = 0;
+	}
+}

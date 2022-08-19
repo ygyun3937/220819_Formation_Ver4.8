@@ -1,0 +1,198 @@
+﻿// CDlgViewMaterial.cpp: 구현 파일
+//
+
+#include "stdafx.h"
+#include "PnxCycler.h"
+#include "CDlgViewMaterial.h"
+#include "afxdialogex.h"
+#include "CMgrMaterial.h"
+#include "MgrChannel.h"
+
+// CDlgViewMaterial 대화 상자
+
+#define UsageUpdateTimer	(1256)
+
+IMPLEMENT_DYNAMIC(CDlgViewMaterial, CDialogEx)
+
+CDlgViewMaterial::CDlgViewMaterial(CWnd* pParent /*=nullptr*/)
+	: CDialogEx(IDD_DLG_VIEW_MATERIAL, pParent)
+{
+
+}
+
+CDlgViewMaterial::~CDlgViewMaterial()
+{
+}
+
+void CDlgViewMaterial::DoDataExchange(CDataExchange* pDX)
+{
+	CDialogEx::DoDataExchange(pDX);
+	DDX_Control(pDX, IDC_LIST_MATERIAL, m_listRelay);
+}
+
+
+BEGIN_MESSAGE_MAP(CDlgViewMaterial, CDialogEx)
+	ON_WM_DESTROY()
+	ON_WM_SHOWWINDOW()
+	ON_WM_TIMER()
+	ON_BN_CLICKED(IDC_BTN_MATERIAL_CLOSE, &CDlgViewMaterial::OnBnClickedBtnMaterialClose)
+END_MESSAGE_MAP()
+
+
+// CDlgViewMaterial 메시지 처리기
+
+BOOL CDlgViewMaterial::Create(CWnd* pParentWnd)
+{
+	return CDialogEx::Create(IDD, pParentWnd);
+}
+
+BOOL CDlgViewMaterial::OnInitDialog()
+{
+	CDialogEx::OnInitDialog();
+
+	CenterWindow();
+
+	InitStatic();
+
+	InitListCtrl();
+
+	return TRUE;  // return TRUE unless you set the focus to a control
+	// 예외: OCX 속성 페이지는 FALSE를 반환해야 합니다.
+}
+
+void CDlgViewMaterial::OnDestroy()
+{
+	CDialogEx::OnDestroy();
+
+	// TODO: 여기에 메시지 처리기 코드를 추가합니다.
+}
+
+void CDlgViewMaterial::OnShowWindow(BOOL bShow, UINT nStatus)
+{
+	CDialogEx::OnShowWindow(bShow, nStatus);
+
+	if (bShow)
+	{
+		LoadRelayCount();
+
+		SetTimer(UsageUpdateTimer, 1000, NULL);
+	}
+	else
+	{
+		KillTimer(UsageUpdateTimer);
+	}
+}
+
+void CDlgViewMaterial::OnTimer(UINT_PTR nIDEvent)
+{
+	if (UsageUpdateTimer == nIDEvent)
+	{
+		CMgrMaterial* pMgr = CMgrMaterial::GetMgr();
+
+		if (pMgr)
+		{
+			m_ctrlText[eViewMaterialObjectValue].SetWindowText(pMgr->GetUsingEquipTime());
+		}
+	}
+
+	CDialogEx::OnTimer(nIDEvent);
+}
+
+void CDlgViewMaterial::InitStatic()
+{
+	CST_DEFAULT(m_ctrlText[eViewMaterialObjectTitle], IDC_STATIC_MATERIAL_TIME_TITLE, this, 14, 0, TRUE, ColorLightGray, ColorWhite, "설비구동시간");
+	CST_DEFAULT(m_ctrlText[eViewMaterialObjectValue], IDC_STATIC_MATERIAL_TIME_VALUE, this, 12, 0, TRUE, ColorWhite, ColorBlack, "000일 00시간 00분 00초");
+}
+
+void	CDlgViewMaterial::InitListCtrl()
+{
+	CRect rt;
+
+	m_listRelay.GetClientRect(&rt);
+
+	m_listRelay.InsertColumn(0, "", LVCFMT_CENTER, 0);
+	m_listRelay.InsertColumn(1, "Channel", LVCFMT_CENTER, rt.Width() / 5);
+	m_listRelay.InsertColumn(2, "Use", LVCFMT_CENTER, rt.Width() / 5);
+	m_listRelay.InsertColumn(3, "Max", LVCFMT_CENTER, rt.Width() / 5);
+	m_listRelay.InsertColumn(4, "Percentage", LVCFMT_CENTER, rt.Width() / 5);
+	m_listRelay.InsertColumn(5, "State", LVCFMT_CENTER, rt.Width() / 5);
+
+	m_listRelay.SetExtendedStyle(LVS_EX_GRIDLINES | LVS_EX_FULLROWSELECT);
+
+}
+
+void CDlgViewMaterial::LoadRelayCount()
+{
+	m_listRelay.DeleteAllItems();
+
+	CMgrChannel* pMgr = CMgrChannel::GetMgr();
+
+	if (!pMgr)
+		return;
+
+	int nIndex = 0;
+
+	CList< CChannel*, CChannel* >& listCyclerChannel = pMgr->GetChannelList();
+
+	auto Pos = listCyclerChannel.GetHeadPosition();
+
+	while (Pos)
+	{
+		CChannel* lpCyclerChannel = listCyclerChannel.GetNext(Pos);
+
+		if(!lpCyclerChannel)
+			continue;
+
+		if (lpCyclerChannel)
+		{
+			LVITEM Item;
+
+			Item.iItem		= nIndex;
+			Item.mask		= LVIF_TEXT | LVIF_PARAM;
+			Item.stateMask	= LVIS_STATEIMAGEMASK;
+			Item.state		= INDEXTOSTATEIMAGEMASK(1);
+			Item.pszText	= _T("");
+			Item.iSubItem	= 0;
+
+			m_listRelay.InsertItem(&Item);
+
+			m_listRelay.SetItemText(nIndex, 0, "");
+
+			CString strCyclerChannelNumber;
+			strCyclerChannelNumber.Format("Channel%d", lpCyclerChannel->GetChannelNumber() + 1);
+
+			CString strRelayUsingCount;
+			strRelayUsingCount.Format("%d", lpCyclerChannel->GetRunningCount());
+
+			int nRelayPercent = lpCyclerChannel->GetRunningCount() / 100000 * 100;
+
+			CString strPercent;
+			strPercent.Format("%d", nRelayPercent);
+
+			CString strState;
+
+			if (nRelayPercent < 70)
+				strState = "Good";
+			else if (nRelayPercent >= 70 && nRelayPercent <= 80)
+				strState = "Need to Check";
+			else if (nRelayPercent >= 80 && nRelayPercent <= 90)
+				strState = "Warning";
+			else if (nRelayPercent > 90)
+				strState = "Dangerous";
+
+
+			m_listRelay.SetItemText(nIndex, 1, strCyclerChannelNumber);
+			m_listRelay.SetItemText(nIndex, 2, strRelayUsingCount);
+			m_listRelay.SetItemText(nIndex, 3, "100000");
+			m_listRelay.SetItemText(nIndex, 4, strPercent);
+			m_listRelay.SetItemText(nIndex, 5, strState);
+
+			nIndex++;
+		}
+	}
+}
+
+void CDlgViewMaterial::OnBnClickedBtnMaterialClose()
+{
+	ShowWindow(SW_HIDE);
+}

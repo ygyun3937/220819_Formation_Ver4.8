@@ -1,0 +1,41 @@
+#pragma once
+
+enum eAlarmType
+{
+	eAlarmTypeUnknown = -1,
+	eAlarmTypeIFWarning,
+	eAlarmTypeIFDC,
+	eAlarmTypeIFBattery,
+	eAlarmTypeIFFault,
+	eAlarmTypeCANIGBT,
+	eAlarmTypeCANWarning,
+	eAlarmTypeCANGrid,
+	eAlarmTypeCANDC,
+	eAlarmTypeCANFault,
+	eAlarmTypeMaxCount
+};
+
+class CAlarm
+{
+public:
+	CAlarm();
+	virtual ~CAlarm();
+
+	int		GetAlarmType();
+	void	SetAlarmType(CString strType);
+
+	CString	GetAlarmText();
+	void	SetAlarmText(CString strAlarmText);
+
+	BOOL	GetAlarmSet();
+	void	SetAlarmSet(BOOL bAlarm);
+
+	CString	GetAlarmStr();
+private:
+	int		m_nAlarmType;
+
+	CString	m_strAlarmText;
+
+	BOOL	m_bAlarmSet;
+};
+

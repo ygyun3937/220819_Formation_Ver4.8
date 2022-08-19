@@ -1,0 +1,236 @@
+#include "stdafx.h"
+#include "MgrSerial.h"
+
+#include "MgrComm.h"
+
+#ifdef _DEBUG
+#define new DEBUG_NEW
+#undef THIS_FILE
+static char THIS_FILE[] = __FILE__;
+#endif
+
+CMgrSerial::CMgrSerial()
+{
+	CMgrComm* pMgr = CMgrComm::GetMgr();
+
+	if (!pMgr)
+		return;
+
+	std::vector<SDevice*> vecValue;
+	pMgr->GetDeivceFromType(eDeviceTypeDaQ, vecValue);
+
+	auto iter = vecValue.begin();
+	auto iterE = vecValue.end();
+
+	while (iter != iterE)
+	{
+		SDevice* lpDevice = (*iter);
+
+		if (lpDevice)
+		{
+			CQueuingSerial* lpQueue = new CQueuingSerial;
+
+			int nPrimaryKey = lpDevice->nPrimaryKey;
+
+			lpQueue->SetPrimaryKey(nPrimaryKey);
+			lpQueue->SetCommType(lpDevice->nCommObj);
+
+			m_mapSerial.insert(std::pair<int, CQueuingSerial*>(nPrimaryKey, lpQueue));
+		}
+
+		++iter;
+	}
+
+	pMgr->GetDeivceFromType(eDeviceTypeChamber, vecValue);
+
+	iter = vecValue.begin();
+	iterE = vecValue.end();
+
+	while (iter != iterE)
+	{
+		SDevice* lpDevice = (*iter);
+
+		if (lpDevice)
+		{
+			CQueuingSerial* lpQueue = new CQueuingSerial;
+
+			int nPrimaryKey = lpDevice->nPrimaryKey;
+
+			lpQueue->SetPrimaryKey(nPrimaryKey);
+			lpQueue->SetCommType(lpDevice->nCommObj);
+
+			for (int i = 0; i < lpDevice->arrChannel.GetSize(); ++i)
+			{
+				lpQueue->AddChannelArray(lpDevice->arrChannel.GetAt(i));
+			}
+
+			m_mapSerial.insert(std::pair<int, CQueuingSerial*>(nPrimaryKey, lpQueue));
+		}
+
+		++iter;
+	}
+
+	m_pZebraBCRControl = new CZebraBCRControl();
+	int nBarcodeUSBRS232 = 1;
+	m_strBarcode = "";
+
+	m_pZebraBCRControl->SetInit(nBarcodeUSBRS232, 9600, 8, NOPARITY, 0, 0);
+	m_pZebraBCRControl->CreateThread();
+
+
+
+}
+
+
+CMgrSerial::~CMgrSerial()
+{
+	RemoveAll();
+}
+
+void	CMgrSerial::StartThread()
+{
+	for (auto it = m_mapSerial.begin(); it != m_mapSerial.end(); ++it)
+	{
+		CQueuingSerial* pComm = it->second;
+
+		if (pComm)
+			pComm->StartThread();
+	}
+}
+
+void	CMgrSerial::StopThread()
+{
+	for (auto it = m_mapSerial.begin(); it != m_mapSerial.end(); ++it)
+	{
+		CQueuingSerial* pComm = it->second;
+
+		if (pComm)
+			pComm->StopThread();
+	}
+}
+
+void	CMgrSerial::AddQueue(int nPrimaryKey, CString strTime, BYTE* pszData, int nDataLenth /* nDataLenth defult 0*/)
+{
+	CQueuingSerial* pSerial = GetAt(nPrimaryKey);
+
+	if (pSerial)
+	{
+		TSerial* pComm = new TSerial;
+
+		memset(pComm->pszComm, NULL, 1024);
+
+		pComm->nPrimaryKey	= nPrimaryKey;
+		pComm->strTime		= strTime;
+		pComm->nDataLenth	= nDataLenth;
+
+		memcpy(pComm->pszComm, pszData, sizeof(pComm->pszComm));
+
+		pSerial->AddQueue(pComm);
+	}
+}
+
+void	CMgrSerial::AddQueue(int nPrimaryKey, CString strTime, float fValue)
+{
+	CQueuingSerial* pSerial = GetAt(nPrimaryKey);
+
+	if (pSerial)
+	{
+		TSerial* pComm = new TSerial;
+
+		memset(pComm->pszComm, NULL, 1024);
+
+		pComm->nPrimaryKey = nPrimaryKey;
+		pComm->strTime = strTime;
+		pComm->fValue = fValue;
+
+		pSerial->AddQueue(pComm);
+	}
+}
+
+void	CMgrSerial::AddQueue(int nPrimaryKey, CString strTime, float fValue, int nType)
+{
+	CQueuingSerial* pSerial = GetAt(nPrimaryKey);
+
+	if (pSerial)
+	{
+		TSerial* pComm = new TSerial;
+
+		memset(pComm->pszComm, NULL, 1024);
+
+		pComm->nPrimaryKey = nPrimaryKey;
+		pComm->strTime = strTime;
+		pComm->fValue = fValue;
+		pComm->nChamberDataType = nType;
+
+		pSerial->AddQueue(pComm);
+	}
+}
+
+void	CMgrSerial::AddQueue(int nPrimaryKey, CString strTime, int nElecType, float fValue)
+{
+	CQueuingSerial* pSerial = GetAt(nPrimaryKey);
+
+	if (pSerial)
+	{
+		TSerial* pComm = new TSerial;
+		memset(pComm->pszComm, NULL, 1024);
+
+		pComm->nPrimaryKey = nPrimaryKey;
+		pComm->strTime = strTime;
+		pComm->nElecType = nElecType;
+		pComm->fValue = fValue;
+
+		pSerial->AddQueue(pComm);
+	}
+}
+
+void	CMgrSerial::AddQueue(int nPrimaryKey, CString strTime, char* pData)
+{
+	CQueuingSerial* pSerial = GetAt(nPrimaryKey);
+
+	if (pSerial)
+	{
+		TSerial* pComm = new TSerial;
+
+		memset(pComm->pszComm, NULL, 1024);
+
+		pComm->nPrimaryKey	= nPrimaryKey;
+		pComm->strTime		= strTime;
+
+		memcpy(pComm->pszComm, pData, sizeof(pComm->pszComm));
+
+		pSerial->AddQueue(pComm);
+	}
+}
+
+CQueuingSerial*	CMgrSerial::GetAt(int nPrimaryKey)
+{
+	auto it = m_mapSerial.find(nPrimaryKey);
+
+	if (it == m_mapSerial.end())
+		return NULL;
+
+	return it->second;
+}
+
+
+void	CMgrSerial::RemoveAll()
+{
+	for (auto it = m_mapSerial.begin(); it != m_mapSerial.end(); ++it)
+	{
+		delete it->second;
+	}
+
+	m_mapSerial.clear();
+}
+
+CString CMgrSerial::GetBarcode()
+{
+	return m_strBarcode;
+}
+
+void CMgrSerial::SetBarcode(CString strBarcode)
+{
+	m_strBarcode = strBarcode;
+
+}

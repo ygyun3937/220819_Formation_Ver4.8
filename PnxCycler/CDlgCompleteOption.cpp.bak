@@ -1,0 +1,217 @@
+﻿// CDlgCompleteOption.cpp: 구현 파일
+//
+
+#include "stdafx.h"
+#include "PnxCycler.h"
+#include "CDlgCompleteOption.h"
+#include "afxdialogex.h" 
+#include "MgrChannel.h"
+#include "CDlgNextComplete.h"
+
+// CDlgCompleteOption 대화 상자
+
+IMPLEMENT_DYNAMIC(CDlgCompleteOption, CDialogEx)
+
+CDlgCompleteOption::CDlgCompleteOption(CWnd* pParent /*=nullptr*/)
+	: CDialogEx(IDD_DLG_COMPLETE_OPTION, pParent)
+{
+
+}
+
+CDlgCompleteOption::~CDlgCompleteOption()
+{
+}
+
+void CDlgCompleteOption::DoDataExchange(CDataExchange* pDX)
+{
+	CDialogEx::DoDataExchange(pDX);
+	DDX_Control(pDX, IDC_BTN_IMMEDIATELY_COMPLETE, m_btn_Complete_Immdiately);
+	DDX_Control(pDX, IDC_BTN_STEPCOMPLETE_COMPLETE, m_btn_Complete_AfterStep);
+	DDX_Control(pDX, IDC_BTN_CYCLECOMPLETE_COMPLETE, m_btn_Complete_Cycle);
+	DDX_Control(pDX, IDC_BTN_NEXT_COMPLETE, m_btn_Complete_Reservation);
+}
+
+
+BEGIN_MESSAGE_MAP(CDlgCompleteOption, CDialogEx)
+	ON_BN_CLICKED(IDC_BTN_IMMEDIATELY_COMPLETE, &CDlgCompleteOption::OnBnClickedBtnImmediatelyComplete)
+	ON_BN_CLICKED(IDC_BTN_STEPCOMPLETE_COMPLETE, &CDlgCompleteOption::OnBnClickedBtnStepcompleteComplete)
+	ON_BN_CLICKED(IDC_BTN_CYCLECOMPLETE_COMPLETE, &CDlgCompleteOption::OnBnClickedBtnCyclecompleteComplete)
+	ON_BN_CLICKED(IDC_BTN_NEXT_COMPLETE, &CDlgCompleteOption::OnBnClickedBtnNextComplete)
+	ON_WM_CREATE()
+END_MESSAGE_MAP()
+
+
+// CDlgCompleteOption 메시지 처리기
+
+
+
+
+BOOL CDlgCompleteOption::Create(CWnd * pParentWnd)
+{
+	return CDialogEx::Create(IDD, pParentWnd);
+}
+
+void CDlgCompleteOption::OnBnClickedBtnImmediatelyComplete()
+{
+
+	SYSLOG(Operation, _T("The operator has selected an immediate End command"));
+
+	CMgrChannel* pMgr = CMgrChannel::GetMgr();
+	if (!pMgr)
+		return;
+
+	if (false == pMgr->IsCyclerChannelSelected())
+	{
+		AfxMessageBox("There is no selected channel Info.");
+
+		return;
+	}
+
+
+	////병렬이면 Master 또는 Slave 체널까지 선택하는 함수
+	//fnSelectMasterSlave();
+
+	pMgr->SetCyclerChannelPauseOption(eCyclerCommandOptionCompleteImmediately);
+}
+
+
+void CDlgCompleteOption::OnBnClickedBtnStepcompleteComplete()
+{
+	SYSLOG(Operation, _T("The operator selected the End command after the step was finished"));
+
+	CMgrChannel* pMgr = CMgrChannel::GetMgr();
+
+	if (!pMgr)
+		return;
+
+	if (false == pMgr->IsCyclerChannelSelected())
+	{
+		AfxMessageBox("There is no selected channel Info.");
+
+		return;
+	}
+
+	if (false == pMgr->IsCyclerChannelStarted())
+	{
+		AfxMessageBox("Reservation End command cannot be executed because the schedule is not in progress.");
+
+		return;
+	}
+
+
+	////병렬이면 Master 또는 Slave 체널까지 선택하는 함수
+	//fnSelectMasterSlave();
+
+	pMgr->SetCyclerChannelPauseOption(eCyclerCommandOptionCompleteAfterStepComplete);
+}
+
+
+void CDlgCompleteOption::OnBnClickedBtnCyclecompleteComplete()
+{
+	SYSLOG(Operation, _T("The operator selected the End command after the cycle was finished"));
+
+	CMgrChannel* pMgr = CMgrChannel::GetMgr();
+
+	if (!pMgr)
+		return;
+
+	if (false == pMgr->IsCyclerChannelSelected())
+	{
+		AfxMessageBox("There is no selected channel Info.");
+
+		return;
+	}
+
+	if (false == pMgr->IsCyclerChannelStarted())
+	{
+		AfxMessageBox("Reservation End command cannot be executed because the schedule is not in progress.");
+
+		return;
+	}
+
+	////병렬이면 Master 또는 Slave 체널까지 선택하는 함수
+	//fnSelectMasterSlave();
+
+	pMgr->SetCyclerChannelPauseOption(eCyclerCommandOptionCompleteAfterCycleComplete);
+
+}
+
+
+void CDlgCompleteOption::OnBnClickedBtnNextComplete()
+{
+	SYSLOG(Operation, _T("The operator has selected a reservation End command"));
+
+	CMgrChannel* pMgr = CMgrChannel::GetMgr();
+
+	if (!pMgr)
+		return;
+
+	if (false == pMgr->IsCyclerChannelSelected())
+	{
+		AfxMessageBox("There is no selected channel Info.");
+
+		return;
+	}
+
+	CDlgNextComplete* lpDlg = CDlgNextComplete::GetMgr();
+
+	if (lpDlg)
+		lpDlg->ShowWindow(SW_SHOW);
+}
+
+
+int CDlgCompleteOption::OnCreate(LPCREATESTRUCT lpCreateStruct)
+{
+	if (__super::OnCreate(lpCreateStruct) == -1)
+		return -1;
+
+	// TODO:  여기에 특수화된 작성 코드를 추가합니다.
+
+	return 0;
+}
+
+
+BOOL CDlgCompleteOption::OnInitDialog()
+{
+	__super::OnInitDialog();
+	CenterWindow();
+
+	m_btn_Complete_Immdiately.SetShade(SHS_HARDBUMP, 8, 10, 62, COLOR_WAIT_BTN);
+	m_btn_Complete_Immdiately.SetFont("Verdana", 16, 1400);
+	m_btn_Complete_Immdiately.SetTextColor(COLOR_BLACK);
+
+	m_btn_Complete_AfterStep.SetShade(SHS_HARDBUMP, 8, 10, 62, COLOR_WAIT_BTN);
+	m_btn_Complete_AfterStep.SetFont("Verdana", 16, 1400);
+	m_btn_Complete_AfterStep.SetTextColor(COLOR_BLACK);
+
+	m_btn_Complete_Cycle.SetShade(SHS_HARDBUMP, 8, 10, 62, COLOR_WAIT_BTN);
+	m_btn_Complete_Cycle.SetFont("Verdana", 16, 1400);
+	m_btn_Complete_Cycle.SetTextColor(COLOR_BLACK);
+
+	m_btn_Complete_Reservation.SetShade(SHS_HARDBUMP, 8, 10, 62, COLOR_WAIT_BTN);
+	m_btn_Complete_Reservation.SetFont("Verdana", 16, 1400);
+	m_btn_Complete_Reservation.SetTextColor(COLOR_BLACK);
+
+	// TODO:  여기에 추가 초기화 작업을 추가합니다.
+
+	return TRUE;  // return TRUE unless you set the focus to a control
+				  // 예외: OCX 속성 페이지는 FALSE를 반환해야 합니다.
+}
+
+
+BOOL CDlgCompleteOption::PreTranslateMessage(MSG* pMsg)
+{
+	if (WM_KEYDOWN == pMsg->message)
+	{
+		if (VK_RETURN == pMsg->wParam)
+			return TRUE;
+
+		if (VK_ESCAPE == pMsg->wParam)
+		{
+			ShowWindow(SW_HIDE);
+
+			return TRUE;
+		}
+	}
+	return __super::PreTranslateMessage(pMsg);
+}

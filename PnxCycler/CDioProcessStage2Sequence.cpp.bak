@@ -1,0 +1,1048 @@
+
+#include "stdafx.h"
+#include "PnxCycler.h"
+#include "CDioProcessStage2Sequence.h"
+#include "CDlgViewEqpChannelStatus.h"
+
+#include "MgrDio.h"
+#include "MgrStatus.h"
+#include "MgrConfig.h"
+#include "CMgrModel.h"
+#include "CMgrAccount.h"
+#include "MgrAlarm.h"
+#include "MgrPCan.h"
+
+CDioProcessStage2Sequence::CDioProcessStage2Sequence()
+{
+	m_eStage2PressRunstepCurrent = (enumProcessStepAutoType)0;
+	m_eInitstepCurrentS2 = (enumProcessStepInitType)0;
+
+	m_bThreadLife = FALSE;
+
+	m_bInitCheckFlag = FALSE;
+
+	nTimeOutCnt = 0;
+
+	m_pThread = NULL;
+}
+
+CDioProcessStage2Sequence::~CDioProcessStage2Sequence()
+{
+}
+
+void CDioProcessStage2Sequence::StartThread()
+{
+	if (m_pThread == NULL)
+	{
+		m_bThreadLife = TRUE;
+		m_pThread = AfxBeginThread(threadFunction, this);
+	}
+}
+
+void CDioProcessStage2Sequence::StopThread()
+{
+	m_bThreadLife = FALSE;
+	m_pThread = NULL;
+
+	if (m_pThread != NULL)
+	{
+		DWORD exitcode = ::WaitForSingleObject(m_pThread->m_hThread, INFINITE);
+		if (exitcode == WAIT_TIMEOUT)
+			::TerminateThread(m_pThread->m_hThread, exitcode);
+		m_pThread = NULL;
+	}
+}
+
+// -----------------------------------------------------------------------------
+
+UINT CDioProcessStage2Sequence::threadFunction(LPVOID pParam)
+{
+	CDioProcessStage2Sequence* pThis = (CDioProcessStage2Sequence*)pParam;
+
+	while (pThis->m_bThreadLife)
+	{
+		pThis->threadJob();
+		Sleep(10);
+	}
+
+	return 0;
+}
+
+void CDioProcessStage2Sequence::threadJob(void)
+{
+	doRunStep();
+}
+
+// -----------------------------------------------------------------------------
+
+void CDioProcessStage2Sequence::doRunStep()
+{
+	Run_Stage2();
+}
+
+void CDioProcessStage2Sequence::Run_Stage2()
+{
+	CMgrStatus* pCMgrStatus = CMgrStatus::GetMgr();
+
+	if (pCMgrStatus == NULL)
+	{
+		return;
+	}
+
+	if (pCMgrStatus->GetEqp_RunMode(1) == EQP_RUN_MODE_INIT)
+	{
+		Init_Stage2();
+	}
+	else if (pCMgrStatus->GetEqp_RunMode(1) == EQP_RUN_MODE_AUTO)
+	{
+		Auto_Stage2();
+	}
+}
+
+void CDioProcessStage2Sequence::Auto_Stage2()
+{
+	CString strMsg("");
+	CString strEQName = "";
+	CMgrDio* pMgrDio = CMgrDio::GetMgr();
+	CDlgViewEqpChannelStatus* pMgrChannelStatus = CDlgViewEqpChannelStatus::GetMgr();
+	CMgrAlarm* pMgrAlarm = CMgrAlarm::GetMgr();
+	CMgrModel* pMgrModel = CMgrModel::GetMgr();
+
+	int nStageNo = 1;
+	int nMgrStatuS2 = CMgrStatus::GetMgr()->GetEqpRunStatus(nStageNo);
+	ALARM_ITEM item;
+
+	//Alarm Check
+	if (CMgrPCan::GetMgr()->GetStation(nStageNo)->GetAlarmStatus() == true || nMgrStatuS2 == eCyclerChannelStateError)
+		return;
+
+	//Init Check
+	if (pMgrChannelStatus->GetEqInitFlag(nStageNo) == FALSE)
+		return;
+
+	//Start Check
+	if (pMgrChannelStatus->GetEqStartFlag(nStageNo) == FALSE)
+		return;
+
+	//IO Type Check
+	strEQName = CMgrConfig::GetMgr()->GetDioIniName();
+
+	//220527 YGY IO 수정필요
+	switch (m_eStage2PressRunstepCurrent)
+	{
+	case CDioProcessStage2Sequence::AUTO_STAGE_EQ_RUN_TRAY_IN:
+	{
+		//220627 YGYUN Detect On = true? false? Check 
+		//Tray In Sensor 
+		if (pMgrDio->GetAjinInputData(INPUT_STAGE2_TRAY_CHECK_SENSOR) == true)
+		{
+			Sleep(200);
+			SetStage2AutoStep(AUTO_STAGE_EQ_RUN_TRAY_IN_CHECK);
+			break;
+		}
+		break;
+	}
+	case CDioProcessStage2Sequence::AUTO_STAGE_EQ_RUN_TRAY_IN_CHECK:
+	{
+		//220627 YGYUN Detect On = true? false? Check 
+
+		//DCIR .. IO Type : MOXA
+		if (strEQName == "DioConfig_DCIR")
+		{
+			if (pMgrDio->GetIOStatus(1, 0) == true)
+			{
+				nTimeOutCnt = 0;
+				SetStage2AutoStep(AUTO_JOB_MODEL_CHECK);
+				break;
+			}
+		}
+		//Formation .. IO Type : Ajin
+		else
+		{
+			//Tray In Sensor 
+			if (pMgrDio->GetAjinInputData(INPUT_STAGE2_TRAY_CHECK_SENSOR) == true)
+			{
+				nTimeOutCnt = 0;
+				SetStage2AutoStep(AUTO_JOB_MODEL_CHECK);
+				break;
+			}
+			else
+			{
+				if (nTimeOutCnt > 200)
+				{
+					nTimeOutCnt = 0;
+					pMgrAlarm->AddEqAlarm(ALARM_STAGE2_TRAY_SENSOR_CHECK_OVER_TIME, "Stage2 Tray Input Sensor Check Please", ALARM_LIGHT, &item);
+				}
+				else
+				{
+					nTimeOutCnt += 1;
+				}
+			}
+		}
+		break;
+	}
+	case CDioProcessStage2Sequence::AUTO_JOB_MODEL_CHECK:
+	{
+		//DCIR .. IO Type : MOXA
+		if (strEQName == "DioConfig_DCIR")
+		{
+			if (AfxMessageBox("Model 48*96 or 48*?", MB_YESNO) == IDYES)
+			{
+
+				nTimeOutCnt = 0;
+				pMgrDio->SetMoxa_DCIR_JobChange_ForBack(TRUE);
+				SetStage2AutoStep(AUTO_STAGE_EQ_RUN_CENTERING_FORWORD);
+				break;
+			}
+			else if (IDNO)
+			{
+				nTimeOutCnt = 0;
+				pMgrDio->SetMoxa_DCIR_JobChange_ForBack(false);
+				SetStage2AutoStep(AUTO_STAGE_EQ_RUN_CENTERING_FORWORD);
+				break;
+			}
+
+
+		}
+		//Formation .. IO Type : Ajin
+		else
+		{
+			if (AfxMessageBox("Model 48*96 or 48*?", MB_YESNO) == IDYES)
+			{
+
+				nTimeOutCnt = 0;
+				pMgrDio->SetJobChangeCylinder(nStageNo, TRUE);
+				SetStage2AutoStep(AUTO_STAGE_EQ_RUN_CENTERING_FORWORD);
+				break;
+			}
+			else if (IDNO)
+			{
+				nTimeOutCnt = 0;
+				pMgrDio->SetJobChangeCylinder(nStageNo, false);
+				SetStage2AutoStep(AUTO_STAGE_EQ_RUN_CENTERING_FORWORD);
+				break;
+			}
+			//Tray In Sensor 
+			if (pMgrDio->GetAjinInputData(INPUT_STAGE2_TRAY_CHECK_SENSOR) == true)
+			{
+				nTimeOutCnt = 0;
+				SetStage2AutoStep(AUTO_STAGE_EQ_RUN_CENTERING_FORWORD);
+				break;
+			}
+			else
+			{
+				if (nTimeOutCnt > 200)
+				{
+					nTimeOutCnt = 0;
+					pMgrAlarm->AddEqAlarm(ALARM_STAGE2_TRAY_SENSOR_CHECK_OVER_TIME, "Stage2 Tray Input Sensor Check Please", ALARM_LIGHT, &item);
+				}
+				else
+				{
+					nTimeOutCnt += 1;
+				}
+			}
+		}
+
+
+		break;
+	}
+	case CDioProcessStage2Sequence::AUTO_STAGE_EQ_RUN_CENTERING_FORWORD:
+	{
+		//DCIR .. IO Type : MOXA
+		if (strEQName == "DioConfig_DCIR")
+		{
+			pMgrDio->SetCenteringCylinder(nStageNo, TRUE);
+			//Cylinder Foward Input Sensor Check
+			if (pMgrDio->GetIOStatus(1, 1) == true && pMgrDio->GetIOStatus(1, 3) == true)
+			{
+				nTimeOutCnt = 0;
+				SetStage2AutoStep(AUTO_STAGE_EQ_RUN_CENTERING_CLAMP_FORWORD);
+			}
+			else
+			{
+				if (nTimeOutCnt > 200)
+				{
+					nTimeOutCnt = 0;
+					pMgrAlarm->AddEqAlarm(ALARM_STAGE2_CENTERING_CYLINDER_FOWRRD_SENSOR_CHECK_OVER_TIME, "Stage2 Centering Cylinder Foward Sensor Check Please", ALARM_LIGHT, &item);
+				}
+				else
+				{
+					nTimeOutCnt += 1;
+				}
+			}
+
+		}
+		//Formation .. IO Type : Ajin
+		else
+		{
+			pMgrDio->SetCenteringCylinder(nStageNo, TRUE);
+			//Cylinder Foward Input Sensor Check
+			if (pMgrDio->GetAjinInputData(INPUT_STAGE2_TRAY_CENTERING_CYLINDER_1_FORWARD) == true && pMgrDio->GetAjinInputData(INPUT_STAGE2_TRAY_CENTERING_CYLINDER_2_FORWARD) == true)
+			{
+				nTimeOutCnt = 0;
+				SetStage2AutoStep(AUTO_STAGE_EQ_RUN_CENTERING_CLAMP_FORWORD);
+			}
+			else
+			{
+				if (nTimeOutCnt > 200)
+				{
+					nTimeOutCnt = 0;
+					pMgrAlarm->AddEqAlarm(ALARM_STAGE2_CENTERING_CYLINDER_FOWRRD_SENSOR_CHECK_OVER_TIME, "Stage2 Centering Cylinder Foward Sensor Check Please", ALARM_LIGHT, &item);
+				}
+				else
+				{
+					nTimeOutCnt += 1;
+				}
+			}
+		}
+		break;
+	}
+	case CDioProcessStage2Sequence::AUTO_STAGE_EQ_RUN_CENTERING_CLAMP_FORWORD:
+	{
+		//DCIR .. IO Type : MOXA
+		if (strEQName == "DioConfig_DCIR")
+		{
+			pMgrDio->SetClampCylinder(nStageNo, TRUE);
+			//Clamp Foward Input Sensor Check
+			if (pMgrDio->GetIOStatus(1, 9) == true && pMgrDio->GetIOStatus(1, 11) == true)
+			{
+				nTimeOutCnt = 0;
+				SetStage2AutoStep(AUTO_STAGE_EQ_RUN_PUSHER_DOWN);
+			}
+			else
+			{
+				if (nTimeOutCnt > 200)
+				{
+					nTimeOutCnt = 0;
+					pMgrAlarm->AddEqAlarm(ALARM_STAGE2_CLAMP_CYLINDER_FOWRRD_SENSOR_CHECK_OVER_TIME, "Stage2 Clamp Cylinder Foward Sensor Check Please", ALARM_LIGHT, &item);
+				}
+				else
+				{
+					nTimeOutCnt += 1;
+				}
+			}
+
+		}
+		//Formation .. IO Type : Ajin
+		else
+		{
+			pMgrDio->SetClampCylinder(nStageNo, TRUE);
+			//Clamp Foward Input Sensor Check
+			if (pMgrDio->GetAjinInputData(INPUT_STAGE2_TRAY_CLAMP_CYLINDER_1_CLAMP) == true && pMgrDio->GetAjinInputData(INPUT_STAGE2_TRAY_CLAMP_CYLINDER_2_CLAMP) == true)
+			{
+				//InterLock
+				if (pMgrDio->GetAjinInputData(INPUT_STAGE2_TRAY_INTERLOCK_CHECK_SENSOR) == TRUE)
+				{
+					ALARM_ITEM item;
+
+					CMgrAlarm::GetMgr()->AddEqAlarm(ALARM_STAGE2_TRAY_INTERLOCK_SENSOR_DETECT, "STAGE2 Tray Interlock Sensor Check Please", ALARM_LIGHT, &item);
+					pMgrChannelStatus->SetEqStartFlag(1, FALSE);
+					return;
+				}
+				else
+				{
+					nTimeOutCnt = 0;
+					SetStage2AutoStep(AUTO_STAGE_EQ_RUN_PUSHER_DOWN);
+				}
+			}
+			else
+			{
+				if (nTimeOutCnt > 200)
+				{
+					nTimeOutCnt = 0;
+					pMgrAlarm->AddEqAlarm(ALARM_STAGE2_CLAMP_CYLINDER_FOWRRD_SENSOR_CHECK_OVER_TIME, "Stage2 Clamp Cylinder Foward Sensor Check Please", ALARM_LIGHT, &item);
+				}
+				else
+				{
+					nTimeOutCnt += 1;
+				}
+			}
+		}
+		break;
+	}
+	case CDioProcessStage2Sequence::AUTO_STAGE_EQ_RUN_PUSHER_DOWN:
+	{
+		//DCIR .. IO Type : MOXA
+		if (strEQName == "DioConfig_DCIR")
+		{
+			pMgrDio->SetPusherCylinder(nStageNo, FALSE);
+			//Pusher Down Sensor Check
+			if (pMgrDio->GetIOStatus(1, 14) == true)
+			{
+				nTimeOutCnt = 0;
+				SetStage2AutoStep(AUTO_STAGE_EQ_RUN_PROBE_UP);
+			}
+			else
+			{
+				if (nTimeOutCnt > 200)
+				{
+					nTimeOutCnt = 0;
+					pMgrAlarm->AddEqAlarm(ALARM_STAGE2_PUSHER_CYLINDER_DOWN_SENSOR_CHECK_OVER_TIME, "Stage2 Pusher Cylinder Down Sensor Check Please", ALARM_LIGHT, &item);
+				}
+				else
+				{
+					nTimeOutCnt += 1;
+				}
+			}
+
+		}
+		//Formation .. IO Type : Ajin
+		else
+		{
+			pMgrDio->SetPusherCylinder(nStageNo, FALSE);
+			//Pusher Down Sensor Check
+			if (pMgrDio->GetAjinInputData(INPUT_STAGE2_PUSHER_DOWN) == true)// && pMgrDio->GetAjinInputData(INPUT_STAGE2_UPPER_PUSH_UP) == false)
+			{//InterLock
+				if (pMgrDio->GetAjinInputData(INPUT_STAGE2_TRAY_INTERLOCK_CHECK_SENSOR) == TRUE)
+				{
+					ALARM_ITEM item;
+
+					CMgrAlarm::GetMgr()->AddEqAlarm(ALARM_STAGE2_TRAY_INTERLOCK_SENSOR_DETECT, "STAGE2 Tray Interlock Sensor Check Please", ALARM_LIGHT, &item);
+					pMgrChannelStatus->SetEqStartFlag(1, FALSE);
+					return;
+				}
+				else
+				{
+					nTimeOutCnt = 0;
+					SetStage2AutoStep(AUTO_STAGE_EQ_RUN_PROBE_UP);
+				}
+			}
+			else
+			{
+				if (nTimeOutCnt > 200)
+				{
+					nTimeOutCnt = 0;
+					pMgrAlarm->AddEqAlarm(ALARM_STAGE2_PUSHER_CYLINDER_DOWN_SENSOR_CHECK_OVER_TIME, "Stage2 Pusher Cylinder Down Sensor Check Please", ALARM_LIGHT, &item);
+				}
+				else
+				{
+					nTimeOutCnt += 1;
+				}
+			}
+		}
+		break;
+	}
+	case CDioProcessStage2Sequence::AUTO_STAGE_EQ_RUN_PROBE_UP:
+	{
+		//DCIR .. IO Type : MOXA
+		if (strEQName == "DioConfig_DCIR")
+		{
+			pMgrDio->SetProbeCylinder(nStageNo, TRUE);
+			//Probe Up Sensor Check
+			if (pMgrDio->GetIOStatus(2, 0) == true)
+			{
+				nTimeOutCnt = 0;
+				pMgrModel->SetModelIndex(nStageNo, -1);
+				pMgrModel->SetScheduleIndex(nStageNo, -1);
+				pMgrModel->SetStageScheduleSelect(nStageNo, false);
+				CDlgViewEqpChannelStatus::GetMgr()->SelectSchedule(nStageNo);
+				SetStage2AutoStep(AUTO_STAGE_EQ_SCHEDULE_CHECK);
+			}
+			else
+			{
+				if (nTimeOutCnt > 1000)
+				{
+					nTimeOutCnt = 0;
+					pMgrAlarm->AddEqAlarm(ALARM_STAGE2_PROBE_CYLINDER_UP_SENSOR_CHECK_OVER_TIME, "Stage2 Probe Cylinder Up Sensor Check Please", ALARM_LIGHT, &item);
+				}
+				else
+				{
+					nTimeOutCnt += 1;
+				}
+			}
+
+		}
+		//Formation .. IO Type : Ajin
+		else
+		{
+			pMgrDio->SetProbeCylinder(nStageNo, TRUE);
+			//Pusher Down Sensor Check
+			if (pMgrDio->GetAjinInputData(INPUT_STAGE2_PROBE_UP) == true)// && pMgrDio->GetAjinInputData(INPUT_STAGE2_PROBE_DOWN) == false)
+			{
+				nTimeOutCnt = 0;
+				pMgrModel->SetModelIndex(nStageNo, -1);
+				pMgrModel->SetScheduleIndex(nStageNo, -1);
+				pMgrModel->SetStageScheduleSelect(nStageNo, false);
+				CDlgViewEqpChannelStatus::GetMgr()->SelectSchedule(nStageNo);
+				SetStage2AutoStep(AUTO_STAGE_EQ_SCHEDULE_CHECK);
+			}
+			else
+			{
+				if (nTimeOutCnt > 1000)
+				{
+					nTimeOutCnt = 0;
+					pMgrAlarm->AddEqAlarm(ALARM_STAGE2_PROBE_CYLINDER_UP_SENSOR_CHECK_OVER_TIME, "Stage2 Probe Cylinder Up Sensor Check Please", ALARM_LIGHT, &item);
+				}
+				else
+				{
+					nTimeOutCnt += 1;
+				}
+			}
+		}
+		break;
+	}
+	case CDioProcessStage2Sequence::AUTO_STAGE_EQ_SCHEDULE_CHECK:
+	{	//모델 선택 확인
+		SModel* lpModel = pMgrModel->GetModel(pMgrModel->GetModelIndex(nStageNo));
+		//스케줄 선택 확인
+		SSchedule* lpSchedule = lpModel->GetSchedule(pMgrModel->GetScheduleIndex(nStageNo));
+		if (lpSchedule&& lpModel&&pMgrModel->GetStageScheduleSelect(nStageNo))
+		{
+			nTimeOutCnt = 0;
+			SetStage2AutoStep(AUTO_STAGE_EQ_SCEDULE_START);
+		}
+		else
+		{
+			if (nTimeOutCnt > 5000)
+			{
+				nTimeOutCnt = 0;
+				pMgrAlarm->AddEqAlarm(ALARM_STAGE2_SCHDULE_SELECT_OVER_TIME, "Stage2 Schdule Select Check Please", ALARM_LIGHT, &item);
+			}
+			else
+			{
+				nTimeOutCnt += 1;
+			}
+		}
+		break;
+	}
+	case CDioProcessStage2Sequence::AUTO_STAGE_EQ_SCEDULE_START:
+	{
+		CDlgViewEqpChannelStatus::GetMgr()->ExecProcScheduleStart(nStageNo);
+		Sleep(500);
+		nTimeOutCnt = 0;
+		SetStage2AutoStep(AUTO_STAGE_EQ_SCEDULE_END_CHECK);
+		break;
+	}
+	case CDioProcessStage2Sequence::AUTO_STAGE_EQ_SCEDULE_END_CHECK:
+	{
+		nMgrStatuS2 = CMgrStatus::GetMgr()->GetEqpRunStatus(nStageNo);
+
+		if (nMgrStatuS2 == eCyclerChannelStateComplete)
+		{
+			nTimeOutCnt = 0;
+			SetStage2AutoStep(AUTO_STAGE_EQ_RUN_PROBE_DOWN);
+		}
+		else
+		{
+			if (CMgrPCan::GetMgr()->GetStation(nStageNo)->GetAlarmStatus() == true || nMgrStatuS2 == eCyclerChannelStateError)
+			{
+				pMgrAlarm->AddEqAlarm(ALARM_STAGE2_STATUS_ALARM, "Stage2 Inverter && Schedule Status Check Please", ALARM_LIGHT, &item);
+			}
+		}
+		break;
+	}
+	case CDioProcessStage2Sequence::AUTO_STAGE_EQ_RUN_PROBE_DOWN:
+	{
+		//DCIR .. IO Type : MOXA
+		if (strEQName == "DioConfig_DCIR")
+		{
+			pMgrDio->SetProbeCylinder(nStageNo, FALSE);
+			//Probe Down Sensor Check
+			if (pMgrDio->GetIOStatus(2, 1) == true)
+			{
+				nTimeOutCnt = 0;
+				SetStage2AutoStep(AUTO_STAGE_EQ_RUN_PUSHER_UP);
+			}
+			else
+			{
+				if (nTimeOutCnt > 1000)
+				{
+					nTimeOutCnt = 0;
+					pMgrAlarm->AddEqAlarm(ALARM_STAGE2_PROBE_CYLINDER_DOWN_SENSOR_CHECK_OVER_TIME, "Stage2 Probe Cylinder Down Sensor Check Please", ALARM_LIGHT, &item);
+				}
+				else
+				{
+					nTimeOutCnt += 1;
+				}
+			}
+
+		}
+		//Formation .. IO Type : Ajin
+		else
+		{
+			pMgrDio->SetProbeCylinder(nStageNo, FALSE);
+			//Probe Down Sensor Check
+			if (pMgrDio->GetAjinInputData(INPUT_STAGE2_PROBE_DOWN) == true)// && pMgrDio->GetAjinInputData(INPUT_STAGE2_PROBE_DOWN) == false)
+			{//InterLock
+				if (pMgrDio->GetAjinInputData(INPUT_STAGE2_TRAY_INTERLOCK_CHECK_SENSOR) == TRUE)
+				{
+					ALARM_ITEM item;
+
+					CMgrAlarm::GetMgr()->AddEqAlarm(ALARM_STAGE2_TRAY_INTERLOCK_SENSOR_DETECT, "STAGE2 Tray Interlock Sensor Check Please", ALARM_LIGHT, &item);
+					pMgrChannelStatus->SetEqStartFlag(1, FALSE);
+					return;
+				}
+				else
+				{
+					nTimeOutCnt = 0;
+					SetStage2AutoStep(AUTO_STAGE_EQ_RUN_PUSHER_UP);
+				}
+			}
+			else
+			{
+				if (nTimeOutCnt > 1000)
+				{
+					nTimeOutCnt = 0;
+					pMgrAlarm->AddEqAlarm(ALARM_STAGE2_PROBE_CYLINDER_DOWN_SENSOR_CHECK_OVER_TIME, "Stage2 Probe Cylinder Down Sensor Check Please", ALARM_LIGHT, &item);
+				}
+				else
+				{
+					nTimeOutCnt += 1;
+				}
+			}
+		}
+		break;
+	}
+	case CDioProcessStage2Sequence::AUTO_STAGE_EQ_RUN_PUSHER_UP:
+	{
+		//DCIR .. IO Type : MOXA
+		if (strEQName == "DioConfig_DCIR")
+		{
+			pMgrDio->SetPusherCylinder(nStageNo, TRUE);
+			//Pusher Up Sensor Check
+			if (pMgrDio->GetIOStatus(1, 13) == true)
+			{
+				nTimeOutCnt = 0;
+				SetStage2AutoStep(AUTO_STAGE_EQ_RUN_CENTERING_CLAMP_BACKWORD);
+			}
+			else
+			{
+				if (nTimeOutCnt > 200)
+				{
+					nTimeOutCnt = 0;
+					pMgrAlarm->AddEqAlarm(ALARM_STAGE2_PUSHER_CYLINDER_UP_SENSOR_CHECK_OVER_TIME, "Stage2 Pusher Cylinder Up Sensor Check Please", ALARM_LIGHT, &item);
+				}
+				else
+				{
+					nTimeOutCnt += 1;
+				}
+			}
+
+		}
+		//Formation .. IO Type : Ajin
+		else
+		{
+			pMgrDio->SetPusherCylinder(nStageNo, TRUE);
+			//Pusher Up Sensor Check
+			if (pMgrDio->GetAjinInputData(INPUT_STAGE2_PUSHER_UP) == true)// && pMgrDio->GetAjinInputData(INPUT_STAGE2_PROBE_DOWN) == false)
+			{
+				nTimeOutCnt = 0;
+				SetStage2AutoStep(AUTO_STAGE_EQ_RUN_CENTERING_CLAMP_BACKWORD);
+			}
+			else
+			{
+				if (nTimeOutCnt > 200)
+				{
+					nTimeOutCnt = 0;
+					pMgrAlarm->AddEqAlarm(ALARM_STAGE2_PUSHER_CYLINDER_UP_SENSOR_CHECK_OVER_TIME, "Stage2 Pusher Cylinder Up Sensor Check Please", ALARM_LIGHT, &item);
+				}
+				else
+				{
+					nTimeOutCnt += 1;
+				}
+			}
+		}
+		break;
+	}
+	case CDioProcessStage2Sequence::AUTO_STAGE_EQ_RUN_CENTERING_CLAMP_BACKWORD:
+	{
+		//DCIR .. IO Type : MOXA
+		if (strEQName == "DioConfig_DCIR")
+		{
+			pMgrDio->SetClampCylinder(nStageNo, FALSE);
+			//Clamp Backward Sensor Check
+			if (pMgrDio->GetIOStatus(1, 10) == true && pMgrDio->GetIOStatus(1, 12) == true)
+			{
+				nTimeOutCnt = 0;
+				SetStage2AutoStep(AUTO_STAGE_EQ_RUN_CENTERING_BACKWORD);
+			}
+			else
+			{
+				if (nTimeOutCnt > 200)
+				{
+					nTimeOutCnt = 0;
+					pMgrAlarm->AddEqAlarm(ALARM_STAGE2_CLAMP_CYLINDER_BACKWARD_SENSOR_CHECK_OVER_TIME, "Stage2 Clamp Cylinder Backward Sensor Check Please", ALARM_LIGHT, &item);
+				}
+				else
+				{
+					nTimeOutCnt += 1;
+				}
+			}
+
+		}
+		//Formation .. IO Type : Ajin
+		else
+		{
+			pMgrDio->SetClampCylinder(nStageNo, FALSE);
+			//Clamp Backward Sensor Check
+			if (pMgrDio->GetAjinInputData(INPUT_STAGE2_TRAY_CLAMP_CYLINDER_1_UNCLAMP) == true && pMgrDio->GetAjinInputData(INPUT_STAGE2_TRAY_CLAMP_CYLINDER_2_UNCLAMP) == true)
+			{
+				nTimeOutCnt = 0;
+				SetStage2AutoStep(AUTO_STAGE_EQ_RUN_CENTERING_BACKWORD);
+			}
+			else
+			{
+				if (nTimeOutCnt > 200)
+				{
+					nTimeOutCnt = 0;
+					pMgrAlarm->AddEqAlarm(ALARM_STAGE2_CLAMP_CYLINDER_BACKWARD_SENSOR_CHECK_OVER_TIME, "Stage2 Clamp Cylinder Backward Sensor Check Please", ALARM_LIGHT, &item);
+				}
+				else
+				{
+					nTimeOutCnt += 1;
+				}
+			}
+		}
+		break;
+	}
+	case CDioProcessStage2Sequence::AUTO_STAGE_EQ_RUN_CENTERING_BACKWORD:
+	{
+		//DCIR .. IO Type : MOXA
+		if (strEQName == "DioConfig_DCIR")
+		{
+			pMgrDio->SetCenteringCylinder(nStageNo, FALSE);
+			//Centering Backward Sensor Check
+			if (pMgrDio->GetIOStatus(1, 2) == true && pMgrDio->GetIOStatus(1, 4) == true)
+			{
+				nTimeOutCnt = 0;
+				SetStage2AutoStep(AUTO_STAGE_RUN_STEP_END);
+			}
+			else
+			{
+				if (nTimeOutCnt > 200)
+				{
+					nTimeOutCnt = 0;
+					pMgrAlarm->AddEqAlarm(ALARM_STAGE2_CENTERING_CYLINDER_BACKWARD_SENSOR_CHECK_OVER_TIME, "Stage2 Centering Cylinder Backward Sensor Check Please", ALARM_LIGHT, &item);
+				}
+				else
+				{
+					nTimeOutCnt += 1;
+				}
+			}
+
+		}
+		//Formation .. IO Type : Ajin
+		else
+		{
+			pMgrDio->SetCenteringCylinder(nStageNo, FALSE);
+			//Centering Backward Sensor Check
+			if (pMgrDio->GetAjinInputData(INPUT_STAGE2_TRAY_CENTERING_CYLINDER_1_BACKWARD) == true && pMgrDio->GetAjinInputData(INPUT_STAGE2_TRAY_CENTERING_CYLINDER_2_BACKWARD) == true)
+			{
+				nTimeOutCnt = 0;
+				SetStage2AutoStep(AUTO_STAGE_RUN_STEP_END);
+			}
+			else
+			{
+				if (nTimeOutCnt > 200)
+				{
+					nTimeOutCnt = 0;
+					pMgrAlarm->AddEqAlarm(ALARM_STAGE2_CENTERING_CYLINDER_BACKWARD_SENSOR_CHECK_OVER_TIME, "Stage2 Centering Cylinder Backward Sensor Check Please", ALARM_LIGHT, &item);
+				}
+				else
+				{
+					nTimeOutCnt += 1;
+				}
+			}
+		}
+		break;
+	}
+	case CDioProcessStage2Sequence::AUTO_STAGE_RUN_STEP_END:
+	{
+		nTimeOutCnt = 0;
+		pMgrChannelStatus->SetEqStartFlag(nStageNo, FALSE);
+		SetStage2AutoStep(AUTO_STAGE_EQ_RUN_TRAY_IN);
+		break;
+	}
+	case CDioProcessStage2Sequence::AUTO_STAGE_ERROR_Check:
+	{
+		break;
+	}
+	default:
+	{
+		break;
+	}
+	}
+
+}
+void CDioProcessStage2Sequence::Init_Stage2()
+{
+	CString strEQName = "";
+	CMgrDio* pMgrDio = CMgrDio::GetMgr();
+	CDlgViewEqpChannelStatus* pMgrChannelStatus = CDlgViewEqpChannelStatus::GetMgr();
+	CMgrAlarm* pMgrAlarm = CMgrAlarm::GetMgr();
+	int nMgrStatuS2 = CMgrStatus::GetMgr()->GetEqpRunStatus(1);
+	int nStageNo =1;
+	ALARM_ITEM item;
+
+	//Alarm Check
+	if (CMgrPCan::GetMgr()->GetStation(1)->GetAlarmStatus() == true || nMgrStatuS2 == eCyclerChannelStateError)
+		return;
+
+	//Start Check
+	if (pMgrChannelStatus->GetEqStartFlag(1) == FALSE)
+		return;
+
+	//IO Type Check
+	strEQName = CMgrConfig::GetMgr()->GetDioIniName();
+
+
+	switch (m_eInitstepCurrentS2)
+	{
+	case CDioProcessStage2Sequence::Init_Step_Probe_Pin_Down:
+	{
+		//DCIR .. IO Type : MOXA
+		if (strEQName == "DioConfig_DCIR")
+		{
+			pMgrDio->SetProbeCylinder(nStageNo, FALSE);
+			//Probe Down Sensor Check
+			if (pMgrDio->GetIOStatus(2, 1) == true)
+			{
+				nTimeOutCnt = 0;
+				SetInitS2Step(Init_Step_Pusher_Up);
+			}
+			else
+			{
+				if (nTimeOutCnt > 1000)
+				{
+					nTimeOutCnt = 0;
+					pMgrAlarm->AddEqAlarm(ALARM_STAGE2_PROBE_CYLINDER_DOWN_SENSOR_CHECK_OVER_TIME, "Stage2 Probe Cylinder Down Sensor Check Please", ALARM_LIGHT, &item);
+				}
+				else
+				{
+					nTimeOutCnt += 1;
+				}
+			}
+
+		}
+		//Formation .. IO Type : Ajin
+		else
+		{
+			pMgrDio->SetProbeCylinder(nStageNo, FALSE);
+			//Pusher Down Sensor Check
+			if (pMgrDio->GetAjinInputData(INPUT_STAGE2_PROBE_DOWN) == true)// && pMgrDio->GetAjinInputData(INPUT_STAGE2_PROBE_DOWN) == false)
+			{
+				nTimeOutCnt = 0;
+				SetInitS2Step(Init_Step_Pusher_Up);
+			}
+			else
+			{
+				if (nTimeOutCnt > 1000)
+				{
+					nTimeOutCnt = 0;
+					pMgrAlarm->AddEqAlarm(ALARM_STAGE2_PROBE_CYLINDER_DOWN_SENSOR_CHECK_OVER_TIME, "Stage2 Probe Cylinder Down Sensor Check Please", ALARM_LIGHT, &item);
+				}
+				else
+				{
+					nTimeOutCnt += 1;
+				}
+			}
+		}
+		break;
+	}
+	case CDioProcessStage2Sequence::Init_Step_Pusher_Up:
+	{
+		//DCIR .. IO Type : MOXA
+		if (strEQName == "DioConfig_DCIR")
+		{
+			pMgrDio->SetPusherCylinder(nStageNo, TRUE);
+			//Pusher Up Sensor Check
+			if (pMgrDio->GetIOStatus(1, 13) == true)
+			{
+				nTimeOutCnt = 0;
+				SetInitS2Step(Init_Step_Clamp_UnClamp);
+			}
+			else
+			{
+				if (nTimeOutCnt > 200)
+				{
+					nTimeOutCnt = 0;
+					pMgrAlarm->AddEqAlarm(ALARM_STAGE2_PUSHER_CYLINDER_UP_SENSOR_CHECK_OVER_TIME, "Stage2 Pusher Cylinder Up Sensor Check Please", ALARM_LIGHT, &item);
+				}
+				else
+				{
+					nTimeOutCnt += 1;
+				}
+			}
+
+		}
+		//Formation .. IO Type : Ajin
+		else
+		{
+			pMgrDio->SetPusherCylinder(nStageNo, TRUE);
+			//Pusher Up Sensor Check
+			if (pMgrDio->GetAjinInputData(INPUT_STAGE2_PUSHER_UP) == true)// && pMgrDio->GetAjinInputData(INPUT_STAGE2_PROBE_DOWN) == false)
+			{
+				nTimeOutCnt = 0;
+				SetInitS2Step(Init_Step_Clamp_UnClamp);
+			}
+			else
+			{
+				if (nTimeOutCnt > 200)
+				{
+					nTimeOutCnt = 0;
+					pMgrAlarm->AddEqAlarm(ALARM_STAGE2_PUSHER_CYLINDER_UP_SENSOR_CHECK_OVER_TIME, "Stage2 Pusher Cylinder Up Sensor Check Please", ALARM_LIGHT, &item);
+				}
+				else
+				{
+					nTimeOutCnt += 1;
+				}
+			}
+		}
+		break;
+	}
+	case CDioProcessStage2Sequence::Init_Step_Clamp_UnClamp:
+	{
+		//DCIR .. IO Type : MOXA
+		if (strEQName == "DioConfig_DCIR")
+		{
+			pMgrDio->SetClampCylinder(nStageNo, FALSE);
+			//Clamp Backward Sensor Check
+			if (pMgrDio->GetIOStatus(1, 10) == true && pMgrDio->GetIOStatus(1, 12) == true)
+			{
+				nTimeOutCnt = 0;
+				SetInitS2Step(Init_Step_Centering_Backward);
+			}
+			else
+			{
+				if (nTimeOutCnt > 200)
+				{
+					nTimeOutCnt = 0;
+					pMgrAlarm->AddEqAlarm(ALARM_STAGE2_CLAMP_CYLINDER_BACKWARD_SENSOR_CHECK_OVER_TIME, "Stage2 Clamp Cylinder Backward Sensor Check Please", ALARM_LIGHT, &item);
+				}
+				else
+				{
+					nTimeOutCnt += 1;
+				}
+			}
+
+		}
+		//Formation .. IO Type : Ajin
+		else
+		{
+			pMgrDio->SetClampCylinder(nStageNo, FALSE);
+			//Clamp Backward Sensor Check
+			if (pMgrDio->GetAjinInputData(INPUT_STAGE2_TRAY_CLAMP_CYLINDER_1_UNCLAMP) == true && pMgrDio->GetAjinInputData(INPUT_STAGE2_TRAY_CLAMP_CYLINDER_2_UNCLAMP) == true)
+			{
+				nTimeOutCnt = 0;
+				SetInitS2Step(Init_Step_Centering_Backward);
+			}
+			else
+			{
+				if (nTimeOutCnt > 200)
+				{
+					nTimeOutCnt = 0;
+					pMgrAlarm->AddEqAlarm(ALARM_STAGE2_CLAMP_CYLINDER_BACKWARD_SENSOR_CHECK_OVER_TIME, "Stage2 Clamp Cylinder Backward Sensor Check Please", ALARM_LIGHT, &item);
+				}
+				else
+				{
+					nTimeOutCnt += 1;
+				}
+			}
+		}
+		break;
+	}
+	case CDioProcessStage2Sequence::Init_Step_Centering_Backward:
+	{
+		//DCIR .. IO Type : MOXA
+		if (strEQName == "DioConfig_DCIR")
+		{
+			pMgrDio->SetCenteringCylinder(nStageNo, FALSE);
+			//Centering Backward Sensor Check
+			if (pMgrDio->GetIOStatus(1, 2) == true && pMgrDio->GetIOStatus(1, 4) == true)
+			{
+				nTimeOutCnt = 0;
+				SetInitS2Step(Init_Step_End);
+			}
+			else
+			{
+				if (nTimeOutCnt > 200)
+				{
+					nTimeOutCnt = 0;
+					pMgrAlarm->AddEqAlarm(ALARM_STAGE2_CENTERING_CYLINDER_BACKWARD_SENSOR_CHECK_OVER_TIME, "Stage2 Centering Cylinder Backward Sensor Check Please", ALARM_LIGHT, &item);
+				}
+				else
+				{
+					nTimeOutCnt += 1;
+				}
+			}
+
+		}
+		//Formation .. IO Type : Ajin
+		else
+		{
+			pMgrDio->SetCenteringCylinder(nStageNo, FALSE);
+			//Centering Backward Sensor Check
+			if (pMgrDio->GetAjinInputData(INPUT_STAGE2_TRAY_CENTERING_CYLINDER_1_BACKWARD) == true && pMgrDio->GetAjinInputData(INPUT_STAGE2_TRAY_CENTERING_CYLINDER_2_BACKWARD) == true)
+			{
+				nTimeOutCnt = 0;
+				SetInitS2Step(Init_Step_End);
+			}
+			else
+			{
+				if (nTimeOutCnt > 200)
+				{
+					nTimeOutCnt = 0;
+					pMgrAlarm->AddEqAlarm(ALARM_STAGE2_CENTERING_CYLINDER_BACKWARD_SENSOR_CHECK_OVER_TIME, "Stage2 Centering Cylinder Backward Sensor Check Please", ALARM_LIGHT, &item);
+				}
+				else
+				{
+					nTimeOutCnt += 1;
+				}
+			}
+		}
+		break;
+	}
+	case CDioProcessStage2Sequence::Init_Step_End:
+	{
+		nTimeOutCnt = 0;
+		SetStage2AutoStep(AUTO_STAGE_EQ_RUN_TRAY_IN);
+		pMgrChannelStatus->SetEqStartFlag(1, FALSE);
+		pMgrChannelStatus->SetEqInitFlag(1, TRUE);
+		SetInitS2Step(Init_Step_Probe_Pin_Down);
+		break;
+	}
+	default:
+		break;
+	}
+
+}
+/**
+ * .
+ *
+ * METHOD_NAME : WaitTime
+ * METHOD_TYPE : -
+ * DESCRIPTION :
+ */
+void CDioProcessStage2Sequence::WaitTime(DWORD dwMillisecond)
+{
+	DWORD dwStart;
+	dwStart = GetTickCount();
+
+	while (GetTickCount() - dwStart < dwMillisecond)
+	{
+		Sleep(10);
+	}
+}
+
+void CDioProcessStage2Sequence::m_InitCheck()
+{
+}
+
+void CDioProcessStage2Sequence::SetStage2AutoStep(enumProcessStepAutoType estepPress)
+{
+	m_eStage2PressRunstepPrev = m_eStage2PressRunstepCurrent;
+	m_eStage2PressRunstepCurrent = estepPress;	// 새로 Step으로 전환
+}
+
+void CDioProcessStage2Sequence::SetInitS2Step(enumProcessStepInitType estepPress)
+{
+	m_eInitstepCurrentS2 = estepPress;	// 새로 Step으로 전환
+
+}
+
+void CDioProcessStage2Sequence::Init_Stage2_Seq()
+{
+	SetStage2AutoStep(AUTO_STAGE_EQ_RUN_TRAY_IN);
+	SetInitS2Step(Init_Step_Probe_Pin_Down);
+}
+

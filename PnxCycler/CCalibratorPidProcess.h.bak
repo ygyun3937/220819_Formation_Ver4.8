@@ -1,0 +1,38 @@
+#pragma once
+
+#include "Singleton.h"
+#include "CCalibratorSocket.h"
+
+#include "CPidModbus.h"
+
+class CCalibratorPidProcess : public CWnd, public CSingleton< CCalibratorPidProcess >
+{
+public:
+	CCalibratorPidProcess();
+	virtual ~CCalibratorPidProcess();
+
+public:
+	bool	OpenDevice(CString strIpAddress, int nPort);
+	bool	CloseDevice();
+
+	int		ReadCoilStatus();
+	
+private:
+	bool	Initialize();
+	bool	Dispose();
+
+	bool	InitializeVariables();
+
+	bool	ConnectDeviceModbus();
+	bool	DisconnectDeviceModbus();
+
+private:
+	CPidModbus* m_pPidModbus;
+
+	bool		m_bInitialize;
+	CString		m_strIpAddress;
+	int			m_nPort;
+	
+
+};
+
